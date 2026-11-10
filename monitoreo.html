@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'; connect-src https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Monitoreo en tiempo real del vehículo IoT: conectividad, estado, DEMO, historial y eventos WebSocket.">
+  <meta name="theme-color" content="#060d24">
+  <title>Monitoreo · Excavadora IoT</title>
+  <link rel="icon" href="assets/icons/favicon.ico" sizes="32x32">
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="assets/site.webmanifest">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script type="module" src="js/pages/monitoreo.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="barra-sup">
+    <div class="container-xl barra-sup-in">
+      <a class="marca" href="index.html">
+        <img src="assets/icons/favicon.svg" alt="" width="40" height="40">
+        <span class="marca-txt"><strong>Excavadora IoT</strong><small id="vehiculoNombre">Vehículo #1</small></span>
+      </a>
+      <nav class="nav-sec" aria-label="Secciones">
+        <a href="index.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Control</span></a>
+        <a href="monitoreo.html" aria-current="page"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pulse"/></svg><span>Monitoreo</span></a>
+        <a href="administracion.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gear"/></svg><span>Administración</span></a>
+      </nav>
+      <button id="btnClave" class="btn btn-sm btn-outline-warning btn-clave" type="button">
+        <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-key"/></svg><span>Sin clave</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="contenido" class="container-xl contenido">
+    <h1 class="titulo-pagina">Monitoreo en tiempo real</h1>
+    <section id="panelConectividad" aria-label="Estado de la conectividad"></section>
+
+    <div class="row g-3">
+      <div class="col-md-6 col-xl-4">
+        <section class="tarjeta h-100" aria-labelledby="tEstado">
+          <div class="tarjeta-h">
+            <h2 id="tEstado">Estado registrado</h2>
+            <button id="btnEstado" class="btn btn-sm btn-outline-info" type="button">Actualizar</button>
+          </div>
+          <dl class="kv">
+            <dt>Último comando</dt><dd id="monComando" class="destacado">—</dd>
+            <dt>Código</dt><dd id="monCodigo">—</dd>
+            <dt>Fecha</dt><dd id="monFecha">—</dd>
+            <dt>Campo «conectado»</dt><dd id="monConectado">—</dd>
+            <dt>Fuente</dt><dd id="monFuente">—</dd>
+          </dl>
+          <p class="ayuda mb-0">«conectado» es un dato guardado en RDS; aún no proviene de una señal verificable del ESP32.</p>
+        </section>
+      </div>
+
+      <div class="col-md-6 col-xl-4">
+        <section class="tarjeta h-100" aria-labelledby="tDemo">
+          <div class="tarjeta-h"><h2 id="tDemo">DEMO en ejecución</h2></div>
+          <div class="progress" role="progressbar" aria-label="Avance de la DEMO" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="barDemo" class="progress-bar barra-demo"></div>
+          </div>
+          <div class="progress progreso-paso" role="progressbar" aria-label="Duración del paso actual" aria-valuemin="0" aria-valuemax="100">
+            <div id="barPaso" class="progress-bar barra-paso"></div>
+          </div>
+          <p id="txtDemo" class="ayuda" aria-live="polite">Sin DEMO en ejecución.</p>
+          <div class="contadores">
+            <div><strong id="cntTotal">0</strong><span>eventos</span></div>
+            <div><strong id="cntMov">0</strong><span>individuales</span></div>
+            <div><strong id="cntDemo">0</strong><span>pasos DEMO</span></div>
+            <div><strong id="cntError">0</strong><span>errores</span></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-md-6 col-xl-4">
+        <section class="tarjeta h-100" aria-labelledby="tHist">
+          <div class="tarjeta-h">
+            <h2 id="tHist">Historial</h2>
+            <button id="btnHistorial" class="btn btn-sm btn-outline-info" type="button">Actualizar</button>
+          </div>
+          <p class="ayuda mt-0">Últimos movimientos individuales (<span id="histTotal">—</span>). Los pasos de DEMO no se guardan aquí.</p>
+          <ul id="listaHistorial" class="registro"></ul>
+        </section>
+      </div>
+
+      <div class="col-md-6 col-xl-4">
+        <section class="tarjeta h-100" aria-labelledby="tCat">
+          <div class="tarjeta-h"><h2 id="tCat">Catálogo de comandos</h2></div>
+          <div class="table-responsive tabla-alta">
+            <table class="table table-sm align-middle mb-0">
+              <thead><tr><th scope="col">Código</th><th scope="col">Nombre</th><th scope="col">Estado</th></tr></thead>
+              <tbody id="tablaCatalogo"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-xl-8">
+        <section class="tarjeta" aria-labelledby="tEventos">
+          <div class="tarjeta-h">
+            <h2 id="tEventos">Eventos WebSocket</h2>
+            <div class="d-flex flex-wrap gap-2">
+              <label class="visually-hidden" for="selFiltro">Filtrar eventos</label>
+              <select id="selFiltro" class="form-select form-select-sm w-auto">
+                <option value="todos">Todos</option>
+                <option value="movimiento">Movimientos individuales</option>
+                <option value="demo">DEMO</option>
+                <option value="estado">Estado</option>
+                <option value="error">Errores</option>
+              </select>
+              <button id="btnPausa" class="btn btn-sm btn-outline-light" type="button" aria-pressed="false">
+                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pause"/></svg> <span>Pausar</span>
+              </button>
+              <button id="btnLimpiar" class="btn btn-sm btn-outline-secondary" type="button">Limpiar</button>
+            </div>
+          </div>
+          <p class="ayuda mt-0">Canal: <code id="wsUrl"></code>. Un evento indica que la API lo registró y difundió, no que el vehículo lo ejecutó.</p>
+          <div class="table-responsive tabla-alta">
+            <table class="table table-sm table-hover align-middle mb-0 tabla-eventos">
+              <thead><tr>
+                <th scope="col">Recibido</th><th scope="col">Evento</th><th scope="col">Comando</th>
+                <th scope="col">Código</th><th scope="col">Servidor</th><th scope="col">Detalle</th>
+              </tr></thead>
+              <tbody id="tablaEventos"></tbody>
+            </table>
+          </div>
+          <p id="eventosVacio" class="vacio mt-2 mb-0">Esperando eventos…</p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="pie">
+    <div class="container-xl">
+      <p class="mb-0">Desarrollado por <strong>Juan Armando Castillo Rodríguez</strong> · 2026</p>
+    </div>
+  </footer>
+</body>
+</html>
