@@ -32,5 +32,5 @@
 ## GitHub Pages
 - [x] Rutas relativas (funciona en `/<repositorio>/`), `.nojekyll`.
 - [x] Favicon SVG + ICO + PNG + apple-touch-icon enlazados en los tres HTML.
-- [x] Pie «Desarrollado por Juan Armando Castillo Rodríguez · 2026» en el flujo del documento; el `padding-bottom` del cuerpo evita que DETENER lo tape.
+- [x] Pie «Desarrollado por Juan Armando Castillo Rodríguez · 2026» en el flujo del documento, debajo de DETENER (sin superposición).
 - [ ] Verificar en la URL publicada: favicon en la pestaña, pie visible, consola sin errores (requiere el parche CORS aplicado).

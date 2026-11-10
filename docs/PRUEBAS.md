@@ -38,8 +38,8 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
-| M1 | Abre Control | La lista se llena con `GET /vehiculos/1/demos` (solo activas) |
-| M2 | Inicia una DEMO | 202; barra de avance según `demo_movimiento`; controles bloqueados salvo DETENER/Cancelar |
+| M1 | Abre Monitoreo | La lista se llena con `GET /vehiculos/1/demos` (solo activas) |
+| M2 | Inicia una DEMO desde Monitoreo con Control abierto en otro dispositivo | 202; barra de avance según `demo_movimiento`; en Control el mando se bloquea y DETENER la cancela |
 | M3 | Intenta iniciar otra durante la ejecución | Botón deshabilitado; si se fuerza, la API responde 409 y la página se resincroniza |
 | M4 | Deja terminar | `demo_finalizada`; controles habilitados de nuevo |
 | M5 | Cuenta el historial (Monitoreo) antes y después | No cambia: los pasos de DEMO no se guardan |
@@ -60,8 +60,8 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 
 | # | Dispositivo | Verificar |
 |---|---|---|
-| R1 | Teléfono vertical (360–412 px) | Sin desplazamiento horizontal; DETENER fijo abajo; pie visible al final sin quedar tapado |
-| R2 | Teléfono horizontal | Joystick y cruceta reducidos; DETENER más bajo |
+| R1 | Teléfono vertical (360–412 px) | Control completo sin scroll: indicadores, mando, acciones, DETENER y pie visibles a la vez |
+| R2 | Teléfono horizontal | Mando a la izquierda, pestañas y acciones a la derecha, sin scroll |
 | R3 | Tableta y escritorio | Dos columnas; indicadores en una fila |
 | R4 | Teclado solo | Foco visible en todo; pestañas de modo con ← → |
 

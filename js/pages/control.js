@@ -1,7 +1,8 @@
 /**
- * Página de CONTROL: tres modos de manejo (Pulso, Joystick, Voz), botones
- * del catálogo, DETENER, DEMO y panel de conectividad.
- * Aquí solo se conectan eventos de la vista con los servicios de dominio.
+ * Página de CONTROL: tres modos de manejo (Pulso, Joystick, Voz), acciones
+ * del catálogo, DETENER y panel de conectividad, todo en una sola pantalla.
+ * Estado, DEMO y mensajes están en Monitoreo. La DEMO se sigue vigilando
+ * aquí para bloquear el mando mientras corre y para que DETENER la cancele.
  */
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
@@ -13,11 +14,10 @@ import { DemoService } from "../domain/demo-service.js";
 import { interpretar, FRASES_EJEMPLO } from "../domain/interprete-voz.js";
 import { Botonera } from "../ui/botonera.js";
 import { Joystick } from "../ui/joystick.js";
-import { DemoPanel } from "../ui/demo-panel.js";
 import { ControlVoz, vozSoportada } from "../ui/voz.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
-import { $, el, hora, registrar, toast, vibrar } from "../ui/dom.js";
-import { iniciarConectividad, pintarVehiculo, textoEvento } from "./comun.js";
+import { $, el, toast, vibrar } from "../ui/dom.js";
+import { iniciarConectividad, pintarVehiculo } from "./comun.js";
 
 const V = CONFIG.vehiculoId;
 const O = CONFIG.origen;
@@ -39,8 +39,12 @@ const comandos = new ComandoService({
   api, vehiculoId: V, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa,
 });
 const { ws } = iniciarConectividad({ compacto: true });
-const lista = $("listaMensajes");
-const log = (etq, txt) => registrar(lista, etq, txt);
+/** Una sola línea de retroalimentación (sustituye a la lista de mensajes). */
+const log = (etq, txt) => {
+  const p = $("lineaEstado");
+  p.textContent = `${etq} · ${txt}`;
+  p.dataset.tipo = etq === "Error" ? "error" : "";
+};
 
 /* ------------------------------ Vista ------------------------------- */
 const botonera = new Botonera({
@@ -50,7 +54,6 @@ const botonera = new Botonera({
   onDetener: () => detenerTodo(O.pulso),
 });
 const joystick = new Joystick($("joystick"), $("joyPerilla"), { onDireccion: alCambiarDireccion });
-const demoPanel = new DemoPanel({ select: $("selDemo"), barra: $("barDemo"), barraPaso: $("barPaso"), texto: $("txtDemo") });
 
 /* ------------------------- Envío de comandos ------------------------ */
 function puedeMover() {
@@ -62,7 +65,7 @@ async function enviar(codigo, origen) {
   const r = await comandos.enviar(codigo, origen);
   if (r.ok && r.estado === "aceptado") {
     const m = r.respuesta;
-    log("API", `${m.comando} (#${m.codigo}) registrado · ${m.clientes_notificados} cliente(s) WSS notificados`);
+    log(m.comando, `registrado por la API · ${m.clientes_notificados} cliente(s) WSS`);
   } else if (!r.ok && r.estado === "rechazado") {
     toast(r.mensaje, "error");
   }
@@ -98,7 +101,7 @@ comandos.addEventListener("fase", (e) => {
   if (e.detail.codigo === catalogo.detener?.codigo) pintarStop(e.detail.fase);
 });
 comandos.addEventListener("paro", (e) => {
-  if (e.detail.ok) log("API", "DETENER registrado (no confirma ejecución física)");
+  if (e.detail.ok) log("DETENER", "registrado por la API (no confirma ejecución física)");
   else { toast("DETENER falló: " + e.detail.mensaje, "error"); log("Error", "DETENER: " + e.detail.mensaje); }
 });
 comandos.addEventListener("fallo", (e) => {
@@ -126,7 +129,7 @@ function alCambiarDireccion(dir) {
   clearInterval(mantener.timer);
   mantener.timer = null;
   const cmd = dir ? catalogo.direccion(dir) : null;
-  $("joyEstado").textContent = cmd ? `→ ${Catalogo.etiqueta(cmd)}` : "Neutral";
+  if (modo === "joystick") log("Joystick", cmd ? Catalogo.etiqueta(cmd) : "neutral");
 
   if (!cmd) {
     if (mantener.dir) {                 // volvió al centro, se soltó o se perdió el puntero
@@ -157,7 +160,7 @@ const voz = new ControlVoz({
     const b = $("btnMic");
     b.classList.toggle("on", on);
     b.setAttribute("aria-pressed", String(on));
-    $("txtMic").textContent = on ? "Escuchando…" : "Toca y habla";
+    $("txtMic").textContent = on ? "Escuchando… habla ahora" : "Toca el micrófono y habla";
   },
 });
 
@@ -172,8 +175,7 @@ async function ejecutarFrase(texto) {
   if (!i) { pintarVoz(`No entendí: «${texto}»`, "no"); return; }
   if (i.tipo === "stop" || i.tipo === "cancelar") { pintarVoz("DETENER", "ok"); await detenerTodo(O.voz); return; }
   if (i.tipo === "demo") {
-    pintarVoz("Iniciar DEMO seleccionada", "ok");
-    await iniciarDemo();
+    pintarVoz("Las DEMO se inician desde Monitoreo.", "no");
     return;
   }
   const cmd = catalogo.porCodigo(i.codigo);
@@ -205,26 +207,9 @@ if (!vozSoportada()) {
 }
 
 /* ------------------------------- DEMO ------------------------------- */
-async function iniciarDemo() {
-  const id = demoPanel.seleccion;
-  if (!id) { toast("Selecciona una DEMO.", "error"); return; }
-  if (!claveStore.obtener()) { abrirDialogoClave(); return; }
-  if (!wsAbierto) { toast("Espera a que la sesión WSS esté en línea para ver el avance.", "error"); return; }
-  try {
-    const r = await demo.iniciar(id);
-    log("DEMO", `«${r.nombre}» aceptada (202) · ${r.total_movimientos} movimientos · ${r.clientes_websocket} cliente(s) WSS`);
-  } catch (e) {
-    toast(e.message, "error");
-    if (e.status === 401) abrirDialogoClave({ motivo: e.message });
-  }
-}
-
-$("btnDemoIniciar").addEventListener("click", iniciarDemo);
-$("btnDemoCancelar").addEventListener("click", () => detenerTodo(O.boton));
-$("selDemo").addEventListener("change", actualizarControles);
-
 demo.addEventListener("cambio", (e) => {
-  demoPanel.pintar(e.detail);
+  if (e.detail.evento === "demo_iniciada") log("DEMO", `«${e.detail.nombre}» en ejecución`);
+  if (e.detail.fin) log("DEMO", e.detail.fin);
   actualizarControles();
 });
 
@@ -245,27 +230,10 @@ ws.addEventListener("mensaje", (e) => {
   const ev = e.detail;
   if (ev.evento === "pong") return;
   const deDemo = demo.procesarEvento(ev);
-  if (ev.comando && ["estado_inicial", "estado_actualizado", "movimiento_individual", "demo_movimiento", "demo_cancelada"].includes(ev.evento)) {
-    pintarEstado(ev);
-    if (ev.evento === "movimiento_individual" || ev.evento === "demo_movimiento") botonera.marcarActivo(ev.codigo);
-  }
+  if (ev.evento === "movimiento_individual" || ev.evento === "demo_movimiento") botonera.marcarActivo(ev.codigo);
+  if (ev.evento === "demo_movimiento") log("DEMO", `paso ${ev.datos.orden}/${ev.datos.total_movimientos}: ${ev.comando}`);
   if (ev.evento === "error" && !deDemo) toast(ev.datos.detalle || "La API informó un error.", "error");
-  log(deDemo ? "DEMO" : "WSS", textoEvento(ev));
 });
-
-const ETQ_EVENTO = {
-  estado_inicial: "Estado inicial (RDS)",
-  estado_actualizado: "Estado actualizado",
-  movimiento_individual: "Movimiento individual",
-  demo_movimiento: "Movimiento de DEMO",
-  demo_cancelada: "DEMO cancelada",
-};
-function pintarEstado(ev) {
-  $("estComando").textContent = ev.comando || "—";
-  $("estCodigo").textContent = ev.codigo ?? "—";
-  $("estHora").textContent = hora(ev.timestamp);
-  $("estFuente").textContent = ETQ_EVENTO[ev.evento] || ev.evento;
-}
 
 /* ---------------------------- Controles ----------------------------- */
 function motivoBloqueo() {
@@ -292,7 +260,6 @@ function actualizarControles() {
     clearInterval(mantener.timer);
     mantener.timer = null;
     mantener.dir = null;
-    $("joyEstado").textContent = "Neutral";
     if (!demo.activa && tieneClave) detenerMovimiento(O.joystick);
   }
 
@@ -303,18 +270,15 @@ function actualizarControles() {
   $("btnOrden").disabled = !tieneClave;
 
   const est = demo.estado;
-  $("btnDemoIniciar").disabled = !(tieneClave && wsAbierto && !est.activa && !demo.solicitando && demoPanel.seleccion);
-  $("btnDemoCancelar").disabled = !(tieneClave && est.activa && !demo.solicitando);
-  $("btnDemoIniciar").setAttribute("aria-busy", String(demo.solicitando));
 
   const aviso = $("aviso");
   let texto = "", tipo = "info";
-  if (!tieneClave) texto = "Falta la clave de operador. Pulsa «Sin clave» en la parte superior.";
-  else if (!catalogo.cargado) { texto = "No se pudo cargar el catálogo de comandos. Revisa el panel de conectividad."; tipo = "error"; }
-  else if (est.activa) texto = "DEMO en ejecución: los controles están bloqueados. DETENER la cancela.";
-  else if (!wsAbierto) { texto = "Sin sesión WSS: el movimiento está bloqueado hasta reconectar. DETENER sigue disponible."; tipo = "error"; }
+  if (!tieneClave) texto = "Falta la clave de operador: pulsa «Sin clave».";
+  else if (!catalogo.cargado) { texto = "No se pudo cargar el catálogo de comandos."; tipo = "error"; }
+  else if (est.activa) texto = "DEMO en ejecución: mando bloqueado. DETENER la cancela.";
+  else if (!wsAbierto) { texto = "Sin sesión WSS: mando bloqueado hasta reconectar. DETENER sigue activo."; tipo = "error"; }
   aviso.textContent = texto;
-  aviso.className = `aviso aviso-${tipo}`;
+  aviso.className = `aviso aviso-linea aviso-${tipo}`;
   aviso.hidden = !texto;
 }
 
@@ -338,6 +302,7 @@ function setModo(nuevo) {
   $("vistaJoystick").hidden = nuevo !== "joystick";
   $("vistaVoz").hidden = nuevo !== "voz";
   $("ayudaModo").textContent = AYUDA[nuevo];
+  $("lineaEstado").textContent = AYUDA[nuevo];
   actualizarControles();
 }
 
@@ -411,14 +376,8 @@ async function cargarCatalogo() {
   actualizarControles();
 }
 
-async function cargarDemos() {
-  try {
-    demoPanel.pintarLista(await demo.cargar());
-    await demo.sincronizar();
-  } catch (e) {
-    demoPanel.pintarLista([]);
-    log("Error", "DEMO: " + e.message);
-  }
+async function sincronizarDemo() {
+  try { await demo.sincronizar(); } catch (e) { log("Error", "DEMO: " + e.message); }
   actualizarControles();
 }
 
@@ -426,7 +385,7 @@ async function cargarDemos() {
   setModo(modo);
   botonera.render(catalogo);
   await inicializarClave();
-  await Promise.all([pintarVehiculo(), cargarCatalogo(), cargarDemos()]);
+  await Promise.all([pintarVehiculo(), cargarCatalogo(), sincronizarDemo()]);
   ws.conectar();
   if (!claveStore.obtener()) abrirDialogoClave({ motivo: "Para mover el vehículo necesitas la clave de operador." });
 })();

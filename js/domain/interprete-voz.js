@@ -30,11 +30,11 @@ const MOVIMIENTOS = [
 
 export const FRASES_EJEMPLO = [
   "avanza", "atrás", "izquierda", "derecha", "sube el brazo", "baja el brazo",
-  "pala a la izquierda", "pala a la derecha", "luz", "sonido", "inicia la demo", "alto",
+  "pala a la izquierda", "pala a la derecha", "luz", "sonido", "alto",
 ];
 
 export function normalizar(t) {
-  return String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 

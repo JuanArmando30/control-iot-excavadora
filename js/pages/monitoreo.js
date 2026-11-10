@@ -1,13 +1,15 @@
 /**
- * Página de MONITOREO (solo lectura, no requiere clave):
- * conectividad, estado registrado, DEMO en curso, historial y eventos WSS.
+ * Página de MONITOREO: conectividad, estado registrado, DEMO (seleccionar,
+ * iniciar, cancelar y ver avance), historial, catálogo y eventos WSS.
+ * Consultar no requiere clave; iniciar o cancelar una DEMO sí.
  */
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
 import { WS } from "../core/ws-client.js";
+import { claveStore } from "../core/clave-store.js";
 import { DemoService } from "../domain/demo-service.js";
 import { DemoPanel } from "../ui/demo-panel.js";
-import { inicializarClave } from "../ui/clave-dialog.js";
+import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, fechaHora, fechaServidor, hora, toast } from "../ui/dom.js";
 import { iniciarConectividad, pintarVehiculo, textoEvento } from "./comun.js";
 
@@ -21,10 +23,49 @@ const GRUPO = {
 
 const { ws } = iniciarConectividad();
 const demo = new DemoService({ api, vehiculoId: V });
-const demoPanel = new DemoPanel({ barra: $("barDemo"), barraPaso: $("barPaso"), texto: $("txtDemo") });
+const demoPanel = new DemoPanel({ select: $("selDemo"), barra: $("barDemo"), barraPaso: $("barPaso"), texto: $("txtDemo") });
 const contadores = { total: 0, movimiento: 0, demo: 0, error: 0 };
 let pausado = false;
 let filtro = "todos";
+let wsAbierto = false;
+
+/* ------------------------------- DEMO ------------------------------- */
+function actualizarBotonesDemo() {
+  const tieneClave = !!claveStore.obtener();
+  const e = demo.estado;
+  $("btnDemoIniciar").disabled = !(tieneClave && wsAbierto && !e.activa && !demo.solicitando && demoPanel.seleccion);
+  $("btnDemoCancelar").disabled = !(tieneClave && e.activa && !demo.solicitando);
+  $("btnDemoIniciar").setAttribute("aria-busy", String(demo.solicitando));
+}
+
+async function iniciarDemo() {
+  const id = demoPanel.seleccion;
+  if (!id) { toast("Selecciona una DEMO.", "error"); return; }
+  if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
+  try {
+    const r = await demo.iniciar(id);
+    toast(`DEMO «${r.nombre}» aceptada (202) · ${r.total_movimientos} movimientos.`, "ok");
+  } catch (e) {
+    toast(e.message, "error");
+    if (e.status === 401) abrirDialogoClave({ motivo: e.message });
+  }
+}
+
+async function cancelarDemo() {
+  if (!claveStore.obtener()) { abrirDialogoClave(); return; }
+  try {
+    await demo.cancelar();
+    toast("Cancelación aceptada: el vehículo queda en DETENER.", "ok");
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
+async function cargarDemos() {
+  try { demoPanel.pintarLista(await demo.cargar()); }
+  catch (e) { demoPanel.pintarLista([]); toast("DEMO: " + e.message, "error"); }
+  actualizarBotonesDemo();
+}
 
 /* ------------------------------ Estado ------------------------------ */
 function pintarEstado({ comando, codigo, fecha, conectado, fuente }) {
@@ -131,13 +172,19 @@ ws.addEventListener("mensaje", (e) => {
   if (!pausado) agregarFila(ev);
 });
 ws.addEventListener("estado", (e) => {
-  if (e.detail.estado === WS.ABIERTO) {
+  wsAbierto = e.detail.estado === WS.ABIERTO;
+  actualizarBotonesDemo();
+  if (wsAbierto) {
     demo.sincronizar().catch(() => {});
     cargarEstado();
     programarHistorial();
   }
 });
-demo.addEventListener("cambio", (e) => demoPanel.pintar(e.detail));
+demo.addEventListener("cambio", (e) => { demoPanel.pintar(e.detail); actualizarBotonesDemo(); });
+$("btnDemoIniciar").addEventListener("click", iniciarDemo);
+$("btnDemoCancelar").addEventListener("click", cancelarDemo);
+$("selDemo").addEventListener("change", actualizarBotonesDemo);
+claveStore.alCambiar(actualizarBotonesDemo);
 
 $("selFiltro").addEventListener("change", (e) => {
   filtro = e.target.value;
@@ -156,6 +203,6 @@ $("wsUrl").textContent = CONFIG.wsUrl(V);
 
 (async function iniciar() {
   inicializarClave();
-  await Promise.all([pintarVehiculo(), cargarEstado(), cargarHistorial(), cargarCatalogo(), demo.sincronizar().catch(() => {})]);
+  await Promise.all([pintarVehiculo(), cargarEstado(), cargarHistorial(), cargarCatalogo(), cargarDemos(), demo.sincronizar().catch(() => {})]);
   ws.conectar();
 })();

@@ -6,9 +6,9 @@ import { el, icono } from "./dom.js";
 import { NIVEL } from "../domain/conectividad-service.js";
 
 const ITEMS = [
-  { clave: "ws", nombre: "WebSocket WSS", sub: "Sesión en vivo de este navegador" },
-  { clave: "api", nombre: "Servidor AWS", sub: "API FastAPI · 21 procedimientos" },
-  { clave: "rds", nombre: "Amazon RDS", sub: "Diagnóstico seguro del backend" },
+  { clave: "ws", nombre: "WebSocket WSS", corto: "WSS", ic: "i-wifi", sub: "Sesión en vivo de este navegador" },
+  { clave: "api", nombre: "Servidor AWS", corto: "AWS API", ic: "i-server", sub: "API FastAPI · 21 procedimientos" },
+  { clave: "rds", nombre: "Amazon RDS", corto: "RDS", ic: "i-db", sub: "Diagnóstico seguro del backend" },
 ];
 
 const ICONO_NIVEL = {
@@ -38,7 +38,11 @@ export class ConectividadPanel {
       const fila = el("div", { class: "conn-item", attrs: { role: "group", "aria-label": it.nombre } }, [
         ico,
         el("div", { class: "conn-txt" }, [
-          el("span", { class: "conn-nombre", text: it.nombre }),
+          el("span", { class: "conn-nombre" }, [
+            icono(it.ic, "ico conn-tipo"),
+            el("span", { class: "lbl-largo", text: it.nombre }),
+            el("span", { class: "lbl-corto", text: it.corto, attrs: { "aria-hidden": "true" } }),
+          ]),
           estado,
           el("small", { class: "conn-sub", text: it.sub }),
           detalle,
@@ -51,14 +55,15 @@ export class ConectividadPanel {
     this.anuncio = el("p", { class: "visually-hidden", attrs: { "aria-live": "polite" } });
     const boton = el("button", {
       class: "btn btn-sm btn-outline-info conn-btn",
-      attrs: { type: "button" },
+      attrs: { type: "button", "aria-label": "Comprobar conectividad ahora", title: "Comprobar ahora" },
       on: { click: () => servicio.comprobar({ manual: true }) },
-    }, [icono("i-sync"), el("span", { text: "Comprobar" })]);
+    }, [icono("i-sync"), el("span", { class: "lbl-largo", text: "Comprobar" })]);
 
     const pie = el("div", { class: "conn-pie" }, [
       el("p", { class: "conn-nota" }, [
         icono("i-info"),
-        el("span", { text: "Vehículo físico: sin confirmación del ESP32. WSS y API en línea no significan que el carrito esté conectado." }),
+        el("span", { class: "lbl-largo", text: "Vehículo físico: sin confirmación del ESP32. WSS y API en línea no significan que el carrito esté conectado." }),
+        el("span", { class: "lbl-corto", text: "Vehículo físico: sin confirmación del ESP32." }),
       ]),
       boton,
     ]);
