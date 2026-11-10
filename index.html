@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'; connect-src https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Control remoto del vehículo IoT: joystick, botones del catálogo, DETENER y DEMO.">
+  <meta name="description" content="Control remoto del vehículo IoT: pulso, joystick, voz, acciones del catálogo y DETENER.">
   <meta name="theme-color" content="#060d24">
   <title>Control · Excavadora IoT</title>
   <link rel="icon" href="assets/icons/favicon.ico" sizes="32x32">
@@ -31,7 +31,7 @@
       <nav class="nav-sec" aria-label="Secciones">
         <a href="index.html" aria-current="page"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Control</span></a>
         <a href="monitoreo.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pulse"/></svg><span>Monitoreo</span></a>
-        <a href="administracion.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gear"/></svg><span>Administración</span></a>
+        <a href="administracion.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gear"/></svg><span class="lbl-largo">Administración</span><span class="lbl-corto" aria-hidden="true">Admin</span></a>
       </nav>
       <button id="btnClave" class="btn btn-sm btn-outline-warning btn-clave" type="button">
         <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-key"/></svg><span>Sin clave</span>
@@ -39,27 +39,31 @@
     </div>
   </header>
 
-  <main id="contenido" class="container-xl contenido">
+  <main id="contenido" class="container-xl contenido-control">
     <section id="panelConectividad" aria-label="Estado de la conectividad"></section>
-    <div id="aviso" class="aviso" role="status" hidden></div>
 
-    <div class="row g-3">
-      <div class="col-lg-7">
-        <section class="tarjeta" aria-labelledby="tCond">
-          <div class="tarjeta-h">
-            <h2 id="tCond">Conducción</h2>
-            <div class="segmento" role="tablist" aria-label="Modo de manejo">
-              <button type="button" role="tab" id="tabPulso" data-modo="pulso" aria-controls="vistaPulso" aria-selected="true">Pulso</button>
-              <button type="button" role="tab" id="tabJoystick" data-modo="joystick" aria-controls="vistaJoystick" aria-selected="false" tabindex="-1">Joystick</button>
-              <button type="button" role="tab" id="tabVoz" data-modo="voz" aria-controls="vistaVoz" aria-selected="false" tabindex="-1">Voz</button>
-            </div>
-          </div>
+    <section class="tarjeta tarjeta-control" aria-labelledby="tCond">
+      <div class="tarjeta-h control-h">
+        <h2 id="tCond" class="visually-hidden">Conducción</h2>
+        <div class="segmento" role="tablist" aria-label="Modo de manejo">
+          <button type="button" role="tab" id="tabPulso" data-modo="pulso" aria-controls="vistaPulso" aria-selected="true">
+            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Pulso</span></button>
+          <button type="button" role="tab" id="tabJoystick" data-modo="joystick" aria-controls="vistaJoystick" aria-selected="false" tabindex="-1">
+            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-joy"/></svg><span>Joystick</span></button>
+          <button type="button" role="tab" id="tabVoz" data-modo="voz" aria-controls="vistaVoz" aria-selected="false" tabindex="-1">
+            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg><span>Voz</span></button>
+        </div>
+      </div>
 
-          <div id="vistaPulso" role="tabpanel" aria-labelledby="tabPulso">
+      <div id="aviso" class="aviso aviso-linea" role="status" hidden></div>
+
+      <div class="control-cuerpo">
+        <div class="zona-mando">
+          <div id="vistaPulso" class="vista" role="tabpanel" aria-labelledby="tabPulso">
             <div id="cruceta" class="cruceta"></div>
           </div>
 
-          <div id="vistaJoystick" role="tabpanel" aria-labelledby="tabJoystick" hidden>
+          <div id="vistaJoystick" class="vista" role="tabpanel" aria-labelledby="tabJoystick" hidden>
             <div id="joystick" class="joy deshabilitado" tabindex="0" role="application"
                  aria-label="Joystick de conducción. Arrastra la perilla o mantén una flecha del teclado; al soltar se envía DETENER."
                  aria-describedby="ayudaModo">
@@ -69,84 +73,50 @@
               <span class="joy-mk mk-derecha" data-dir="derecha"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-right"/></svg></span>
               <div id="joyPerilla" class="joy-perilla"></div>
             </div>
-            <p id="joyEstado" class="joy-estado" aria-live="polite">Neutral</p>
           </div>
 
-          <div id="vistaVoz" role="tabpanel" aria-labelledby="tabVoz" hidden>
+          <div id="vistaVoz" class="vista vista-voz" role="tabpanel" aria-labelledby="tabVoz" hidden>
             <div class="voz">
-              <button id="btnMic" class="mic" type="button" aria-pressed="false">
-                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg>
-                <span id="txtMic">Toca y habla</span>
-              </button>
-              <div class="voz-transcr">
-                <p id="vozTexto">Di una orden, por ejemplo: «avanza».</p>
-                <p id="vozResultado" class="voz-res" aria-live="polite"></p>
+              <div class="voz-fila">
+                <button id="btnMic" class="mic" type="button" aria-pressed="false" aria-describedby="txtMic">
+                  <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg>
+                </button>
+                <div class="voz-transcr">
+                  <p id="txtMic" class="voz-mic-txt">Toca el micrófono y habla</p>
+                  <p id="vozTexto">Di una orden, por ejemplo: «avanza».</p>
+                  <p id="vozResultado" class="voz-res" aria-live="polite"></p>
+                </div>
               </div>
-              <p id="vozEstado" class="ayuda text-center"></p>
-              <div class="form-check form-switch">
-                <input id="chkManosLibres" class="form-check-input" type="checkbox" role="switch">
-                <label class="form-check-label" for="chkManosLibres">Manos libres (escucha continua)</label>
+              <p id="vozEstado" class="voz-estado"></p>
+              <div class="voz-fila voz-opciones">
+                <div class="form-check form-switch m-0">
+                  <input id="chkManosLibres" class="form-check-input" type="checkbox" role="switch">
+                  <label class="form-check-label" for="chkManosLibres">Manos libres</label>
+                </div>
+                <form id="formOrden" class="input-group input-group-sm flex-grow-1">
+                  <input id="txtOrden" class="form-control" type="text" maxlength="120" autocomplete="off" spellcheck="false"
+                         placeholder="…o escribe una orden" aria-label="Orden escrita">
+                  <button id="btnOrden" class="btn btn-primary" type="submit">Enviar</button>
+                </form>
               </div>
-              <form id="formOrden" class="input-group">
-                <input id="txtOrden" class="form-control" type="text" maxlength="120" autocomplete="off" spellcheck="false"
-                       placeholder="…o escribe una orden" aria-label="Orden escrita">
-                <button id="btnOrden" class="btn btn-primary" type="submit">Enviar</button>
-              </form>
               <div id="chipsVoz" class="chips" aria-label="Frases de ejemplo"></div>
             </div>
           </div>
-
-          <p id="ayudaModo" class="ayuda"></p>
-
-          <h3 class="subtitulo">Acciones del catálogo</h3>
-          <div id="secundarios" class="secundarios"></div>
-          <p class="ayuda d-none d-md-block">Teclado: flechas o WASD para moverte · Espacio o Esc = DETENER.</p>
-        </section>
-      </div>
-
-      <div class="col-lg-5">
-        <div class="columna">
-          <section class="tarjeta" aria-labelledby="tEstado">
-            <div class="tarjeta-h"><h2 id="tEstado">Estado reportado</h2></div>
-            <dl class="kv">
-              <dt>Último comando</dt><dd id="estComando" class="destacado">—</dd>
-              <dt>Código</dt><dd id="estCodigo">—</dd>
-              <dt>Hora del evento</dt><dd id="estHora">—</dd>
-              <dt>Fuente</dt><dd id="estFuente">—</dd>
-            </dl>
-            <p class="ayuda mb-0">Es lo último que registró la API y notificó por WSS. No es una confirmación física del vehículo.</p>
-          </section>
-
-          <section class="tarjeta" aria-labelledby="tDemo">
-            <div class="tarjeta-h"><h2 id="tDemo">DEMO</h2></div>
-            <label class="form-label small" for="selDemo">DEMO disponibles (configuradas en la base de datos)</label>
-            <select id="selDemo" class="form-select"></select>
-            <div class="d-flex gap-2 mt-3">
-              <button id="btnDemoIniciar" class="btn btn-success flex-fill" type="button" disabled>
-                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-play"/></svg> Iniciar
-              </button>
-              <button id="btnDemoCancelar" class="btn btn-danger flex-fill" type="button" disabled>
-                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-stop"/></svg> Cancelar
-              </button>
-            </div>
-            <div class="progress mt-3" role="progressbar" aria-label="Avance de la DEMO" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-              <div id="barDemo" class="progress-bar barra-demo"></div>
-            </div>
-            <div class="progress progreso-paso" role="progressbar" aria-label="Duración del paso actual" aria-valuemin="0" aria-valuemax="100">
-              <div id="barPaso" class="progress-bar barra-paso"></div>
-            </div>
-            <p id="txtDemo" class="ayuda mb-0" aria-live="polite">Sin DEMO en ejecución.</p>
-          </section>
-
-          <section class="tarjeta" aria-labelledby="tMensajes">
-            <div class="tarjeta-h">
-              <h2 id="tMensajes">Mensajes</h2>
-              <a class="small" href="monitoreo.html">Ver monitoreo completo</a>
-            </div>
-            <ul id="listaMensajes" class="registro" aria-live="off"></ul>
-          </section>
         </div>
+
+        <div id="secundarios" class="secundarios" role="group" aria-label="Acciones del catálogo"></div>
       </div>
+
+      <p id="lineaEstado" class="linea-estado" aria-live="polite">Listo.</p>
+      <p id="ayudaModo" class="visually-hidden"></p>
+    </section>
+
+    <div class="barra-stop">
+      <button id="btnStop" class="stop" type="button" aria-describedby="stopEstado">
+        <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-stop"/></svg>
+        <span>DETENER</span>
+        <small id="stopEstado" class="stop-estado" aria-live="polite"></small>
+      </button>
     </div>
   </main>
 
@@ -155,13 +125,5 @@
       <p class="mb-0">Desarrollado por <strong>Juan Armando Castillo Rodríguez</strong> · 2026</p>
     </div>
   </footer>
-
-  <div class="barra-stop">
-    <button id="btnStop" class="stop" type="button" aria-describedby="stopEstado">
-      <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-stop"/></svg>
-      <span>DETENER</span>
-      <small id="stopEstado" class="stop-estado" aria-live="polite"></small>
-    </button>
-  </div>
 </body>
 </html>
