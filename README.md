@@ -4,8 +4,8 @@ Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, s
 
 | Sección | Archivo | Qué hace | ¿Clave? |
 |---|---|---|---|
-| **Control** | `index.html` | 3 modos de manejo (Pulso, Joystick, Voz), botones del catálogo, DETENER, DEMO | Operador |
-| **Monitoreo** | `monitoreo.html` | Conectividad, estado registrado, DEMO en curso, historial, catálogo y eventos WSS | No |
+| **Control** | `index.html` | Una sola pantalla sin scroll: 3 modos de manejo (Pulso, Joystick, Voz), acciones del catálogo y DETENER | Operador |
+| **Monitoreo** | `monitoreo.html` | Conectividad, estado registrado, DEMO (seleccionar, iniciar, cancelar, avance), historial, catálogo y eventos WSS | Consultar: no · DEMO: Operador |
 | **Administración / Configuración** | `administracion.html` | Vehículos, comandos, DEMO y sus pasos (endpoints existentes); configuración y clave | Operador (eliminar: Admin) |
 
 Backend existente (no se modifica su lógica ni los 21 procedimientos): FastAPI en Amazon EC2 + Amazon RDS MySQL.
@@ -144,7 +144,7 @@ Para que el REST funcione en local, agrega temporalmente `http://localhost:5500`
 1. Crea un repositorio, por ejemplo `control-vehiculo-iot`, y sube el **contenido** de esta carpeta a la raíz (incluido `.nojekyll`).
 2. *Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main` / `(root)` → Save*.
 3. Espera 1–2 minutos y abre `https://juanarmando30.github.io/control-vehiculo-iot/`.
-4. Verifica: pestaña del navegador con el **favicon** del joystick; **pie** «Desarrollado por Juan Armando Castillo Rodríguez · 2026» visible sobre el botón DETENER; consola sin errores; panel con los tres indicadores.
+4. Verifica: pestaña del navegador con el **favicon** del joystick; **pie** «Desarrollado por Juan Armando Castillo Rodríguez · 2026» visible debajo del botón DETENER; consola sin errores; panel con los tres indicadores.
 5. Aplica el parche CORS (sección 5) antes de probar comandos.
 
 Commits recomendados:
