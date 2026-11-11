@@ -28,6 +28,7 @@ export class Botonera {
     this.habilitado = false;
     this.bloqueoSecundarios = false;
     this.bloqueoBrazo = false;
+    this.interruptores = {};           // codigo → true (encendido) / false
   }
 
   render(catalogo) {
@@ -59,6 +60,7 @@ export class Botonera {
         this._boton(c, { icono: CONFIG.iconos[c.codigo] || "i-bolt", clase: "cbtn cbtn-sec", origen: "boton" })));
     }
     this._aplicarHabilitado();
+    this._aplicarInterruptores();
   }
 
   _boton(cmd, { icono: ic, clase, origen, sinCatalogo = "" }) {
@@ -133,6 +135,24 @@ export class Botonera {
       this.timers.set(codigo, setTimeout(() => {
         for (const b of lista) { b.classList.remove("is-ok", "is-error"); b.querySelector(".cbtn-estado").textContent = ""; }
       }, DURACION_FLASH));
+    }
+  }
+
+  /** Estado de los accesorios interruptor (luz, sonido, encendido): el botón queda marcado mientras sigan encendidos. */
+  setInterruptor(codigo, encendido) {
+    this.interruptores[codigo] = !!encendido;
+    this._aplicarInterruptores();
+  }
+
+  _aplicarInterruptores() {
+    for (const [codigo, txt] of Object.entries(CONFIG.interruptores)) {
+      const on = !!this.interruptores[codigo];
+      for (const b of this.botones.get(Number(codigo)) || []) {
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-pressed", String(on));
+        b.dataset.estado = on ? "ON" : "";
+        b.title = `${b.title.split(" · Estado:")[0]} · Estado: ${on ? txt.on : txt.off}`;
+      }
     }
   }
 

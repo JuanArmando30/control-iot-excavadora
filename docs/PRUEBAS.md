@@ -26,14 +26,20 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | B3b | Cruceta derecha: Subir, Bajar, Pala izq., Pala der. | `POST` con los códigos 5, 6, 7 y 8 (origen `WEB_PULSO`); si desactivas uno en Administración, su botón queda «No disponible» |
 | B3c | Teclado en modo Pulso: `I`, `K`, `J`, `L` | SUBIR_BRAZO, BAJAR_BRAZO, GIRAR_PALA_IZQUIERDA, GIRAR_PALA_DERECHA (origen `WEB_TECLADO`) |
 | B4 | Mantén un joystick y toca un botón del centro (multitáctil) | Botones centrales deshabilitados mientras hay una dirección sostenida; DETENER sigue activo |
-| B5 | Quita la clave (Olvidar clave) | Controles deshabilitados y aviso «Falta la clave» |
+| B5 | Quita la clave (Olvidar clave) con el acceso de prueba desactivado | Controles deshabilitados y aviso «Falta la clave» |
+| B6 | Toca Luz, luego Sonido, luego Luz | Aviso «Luz encendida», «Sonido activado», «Luz apagada»; cada botón queda en ámbar con «ON» mientras siga encendido y vuelve a normal al apagarse; el estado se conserva al recargar |
+| B7 | Acceso de prueba activo (`accesoLibre`) y navegador sin clave guardada | No pide clave; el botón superior dice «Acceso de prueba» y el control funciona |
 
 ## D · DETENER
+
+En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b.
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
 | D1 | Toca DETENER | `POST` con DETENER al instante (pointerdown), estado *Registrado* |
-| D2 | Toca Avanzar e inmediatamente DETENER | Si AVANZAR se confirma después de pedir el paro, se envía un segundo DETENER automático (reafirmación) |
+| D2 | Toca Avanzar e inmediatamente DETENER | Un solo DETENER aunque AVANZAR responda después del paro (el WSS confirma que el servidor lo aplicó antes) |
+| D2b | Igual que D2, pero si el servidor aplica AVANZAR **después** del DETENER (se ve en el orden de eventos WSS) | Se reafirma DETENER automáticamente: el último evento siempre es DETENER |
+| D6 | Mantén el joystick o inclina el teléfono más de 2.4 s y suelta / nivela | Un solo DETENER |
 | D3 | Espacio o Esc en el teclado | DETENER |
 | D4 | Di «alto» (o «detente», «frena», «quieto») en modo Voz | DETENER sin esperar el resultado final del reconocimiento; también si «alto» aparece solo en una de las alternativas del reconocedor |
 | D5 | DETENER durante una DEMO | Llama a `POST …/demos/cancelar`; llega `demo_cancelada` con `detenido_con: "DETENER"` |
@@ -81,13 +87,14 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
-| MC1 | En Administración → DEMO, toca «Usar en Control» en una DEMO activa | La insignia «En Control» pasa a esa DEMO; en Control el botón dice «Iniciar DEMO «…»» al pasar el cursor |
-| MC2 | En Control toca «Demo» una vez y espera 3 s | Muestra «¿Iniciar?» y vuelve a «Demo» sin enviar nada |
-| MC3 | Toca «Demo» dos veces seguidas | `POST …/demos/{id}/iniciar` de la DEMO elegida; el botón muestra «Demo n/N» con barra de avance; aviso «DEMO «…» (n/N): mando bloqueado»; el resto del mando queda deshabilitado |
+| MC1 | Toca «Demo» | Se abre el panel «Elegir DEMO» con las DEMO activas, su número de pasos y duración; la última usada aparece seleccionada. Las DEMO sin pasos aparecen deshabilitadas |
+| MC2 | Elige una DEMO y toca «Iniciar DEMO» | `POST …/demos/{id}/iniciar`; el panel se cierra; el botón muestra «Demo n/N» con barra de avance; aviso «DEMO «…» (n/N): mando bloqueado» |
+| MC3 | Toca «Cancelar» en el panel | No se envía nada |
 | MC4 | Durante la DEMO toca «Demo» o DETENER | `POST …/demos/cancelar`; vuelve a «Demo» |
-| MC5 | Di (o escribe) «inicia la demo» en modo Voz | Inicia la DEMO elegida |
-| MC6 | Sin DEMO activas, sin clave o sin WSS | Botón deshabilitado; el texto emergente explica por qué |
-| MC7 | La DEMO elegida se desactiva o elimina | Control usa la primera DEMO activa |
+| MC5 | En el panel toca «Crear o editar» | Abre Administración directamente en la pestaña DEMO |
+| MC6 | Di (o escribe) «inicia la demo» en modo Voz | Inicia la última DEMO elegida (o la primera activa) |
+| MC7 | Sin clave o sin WSS | Botón deshabilitado |
+| MC8 | Teléfono horizontal estrecho (p. ej. 640×360) | Si Luz · Sonido · On/Off · Demo no caben en una fila, Demo pasa abajo **centrada** |
 
 **Desde Monitoreo:**
 

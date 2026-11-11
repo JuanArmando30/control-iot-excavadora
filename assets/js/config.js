@@ -103,6 +103,28 @@ export const CONFIG = Object.freeze({
     maxPasos: 6,       // tope de órdenes por frase (incluye repeticiones: "avanza tres veces")
   }),
 
+  /**
+   * Accesorios que funcionan como INTERRUPTOR (cada orden alterna el estado).
+   * El botón muestra si quedó encendido y aparece un aviso breve. El estado se
+   * deduce de las órdenes que difunde el servidor por WSS (sin confirmación del ESP).
+   */
+  interruptores: Object.freeze({
+    10: Object.freeze({ on: "Luz encendida", off: "Luz apagada" }),
+    11: Object.freeze({ on: "Sonido activado", off: "Sonido desactivado" }),
+    12: Object.freeze({ on: "Excavadora encendida", off: "Excavadora apagada" }),
+  }),
+
+  /**
+   * ⚠ TEMPORAL · ACCESO DE PRUEBA SIN PEDIR CLAVE.
+   * Con `activo: true` y una `clave`, la página entra directamente: nadie tiene
+   * que escribir la clave X-API-Key. ATENCIÓN: la clave queda VISIBLE en el
+   * código publicado en GitHub Pages; cualquiera que abra la página puede verla
+   * y mover el vehículo. Usa una clave de OPERADOR (no de administrador) y
+   * cámbiala en el backend al terminar las pruebas.
+   * Para volver a pedir la clave: `activo: false` (y borra la clave de aquí).
+   */
+  accesoLibre: Object.freeze({ activo: true, clave: "" }),
+
   /** El backend identifica el paro por nombre (comando_service.buscar_detener). */
   nombreDetener: "DETENER",
 

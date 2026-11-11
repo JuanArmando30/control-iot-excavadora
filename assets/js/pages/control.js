@@ -21,6 +21,7 @@ import { ControlVoz, vozSoportada } from "../ui/voz.js";
 import { Giroscopio } from "../ui/giroscopio.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, toast, vibrar } from "../ui/dom.js";
+import { abrirModal } from "../ui/modales.js";
 import { iniciarConectividad, pintarVehiculo } from "./comun.js";
 
 const V = CONFIG.vehiculoId;
@@ -44,7 +45,7 @@ const mantener = { mando: null, dir: null, timer: null, origen: O.joystick };
 
 const demo = new DemoService({ api, vehiculoId: V });
 const comandos = new ComandoService({
-  api, vehiculoId: V, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa,
+  api, vehiculoId: V, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa, wsActivo: () => wsAbierto,
 });
 const { ws } = iniciarConectividad({ barra: true });
 /** Una sola línea de retroalimentación (sustituye a la lista de mensajes). */
@@ -308,12 +309,11 @@ if (!vozSoportada()) {
 }
 
 /* ------------------------------- DEMO ------------------------------- */
-/* Botón «Demo» (en la fila central, visible en todos los modos). Ejecuta la DEMO
-   elegida en Administración; primer toque = «¿Iniciar?», segundo toque = inicia.
-   Mientras corre muestra el avance y tocarlo la cancela (igual que DETENER). */
+/* Botón «Demo» (fila central, visible en todos los modos). Abre un panel para
+   elegir la DEMO e iniciarla (el panel es la confirmación). Mientras corre
+   muestra el avance y tocarlo la cancela (igual que DETENER). Crear o editar
+   DEMO se hace en Administración (enlace desde el panel). */
 const btnDemo = $("btnDemo");
-const CONFIRMAR_MS = 3000;
-let confirmarDemoHasta = 0;
 
 const demoElegida = () => demoPreferida.resolver(V, demo.demos);
 
@@ -324,29 +324,17 @@ async function cargarDemos() {
 
 function pintarBotonDemo() {
   const e = demo.estado;
-  const d = demoElegida();
   const tieneClave = !!claveStore.obtener();
-  const confirmando = !e.activa && Date.now() < confirmarDemoHasta;
-  const txt = btnDemo.querySelector(".cbtn-txt");
   btnDemo.classList.toggle("is-demo", e.activa);
-  btnDemo.classList.toggle("is-confirmar", confirmando);
   btnDemo.style.setProperty("--avance", e.activa && e.total ? `${Math.round((e.orden / e.total) * 100)}%` : "0%");
   btnDemo.querySelector("use").setAttribute("href", `assets/icons/sprite.svg#${e.activa ? "i-stop" : "i-play"}`);
-  let titulo;
-  if (e.activa) {
-    txt.textContent = e.total ? `Demo ${e.orden}/${e.total}` : "Demo…";
-    titulo = `DEMO «${e.nombre || "en curso"}» en ejecución. Toca para cancelarla.`;
-  } else if (confirmando) {
-    txt.textContent = "¿Iniciar?";
-    titulo = `Toca otra vez para iniciar «${d?.nombre}».`;
-  } else {
-    txt.textContent = "Demo";
-    titulo = d ? `Iniciar DEMO «${d.nombre}» (se elige en Administración).` : "No hay DEMO activas: créalas en Administración.";
-  }
+  btnDemo.querySelector(".cbtn-txt").textContent = e.activa ? (e.total ? `Demo ${e.orden}/${e.total}` : "Demo…") : "Demo";
+  const titulo = e.activa ? `DEMO «${e.nombre || "en curso"}» en ejecución. Toca para cancelarla.` : "Elegir e iniciar una DEMO";
   btnDemo.title = titulo;
   btnDemo.setAttribute("aria-label", titulo);
+  btnDemo.setAttribute("aria-haspopup", e.activa ? "false" : "dialog");
   btnDemo.disabled = demo.solicitando
-    || (e.activa ? !tieneClave : !(d && tieneClave && wsAbierto && catalogo.cargado && !mantener.dir));
+    || (e.activa ? !tieneClave : !(tieneClave && wsAbierto && catalogo.cargado && !mantener.dir));
 }
 
 async function iniciarDemoElegida(d) {
@@ -356,32 +344,109 @@ async function iniciarDemoElegida(d) {
   cancelarSecuenciaVoz("cancelada: inicia una DEMO");
   try {
     const r = await demo.iniciar(d.id_demo);
+    demoPreferida.guardar(V, d.id_demo);                     // la próxima vez aparece preseleccionada
     log("DEMO", `«${r.nombre}» aceptada · ${r.total_movimientos} movimientos`);
     toast(`DEMO «${r.nombre}» en ejecución. DETENER la cancela.`, "ok");
+    return true;
   } catch (e) {
     log("Error", "DEMO: " + e.message);
     if (e.status === 401) { claveStore.olvidar(); abrirDialogoClave({ motivo: e.message }); }
     else toast("DEMO: " + e.message, "error");
+    return false;
+  } finally {
+    pintarBotonDemo();
   }
-  pintarBotonDemo();
+}
+
+/** Panel para elegir la DEMO (radio) e iniciarla; enlace a Administración para crear o editar. */
+function abrirPanelDemo() {
+  const demos = demo.demos;
+  const elegida = demoElegida();
+  const crear = { texto: demos.length ? "Crear o editar" : "Crear DEMO", clase: "btn-outline-light me-auto",
+    alPulsar: () => { location.href = "administracion.html#demo"; } };
+  if (!demos.length) {
+    abrirModal({
+      titulo: "DEMO",
+      cuerpo: [el("p", { class: "mb-0", text: "No hay DEMO activas para este vehículo. Créalas (y agrega sus pasos) en Administración." })],
+      acciones: [crear, { texto: "Cerrar", clase: "btn-outline-secondary" }],
+    });
+    return;
+  }
+  const pasos = new Map();
+  const opciones = demos.map((d) => {
+    const txtPasos = el("small", { class: "demo-pasos", text: "Consultando pasos…" });
+    pasos.set(d.id_demo, txtPasos);
+    return el("label", { class: "demo-opcion" }, [
+      el("input", { attrs: { type: "radio", name: "demo", value: d.id_demo, checked: d.id_demo === elegida?.id_demo, required: true } }),
+      el("span", { class: "demo-opcion-txt" }, [
+        el("strong", { text: d.nombre }),
+        el("small", { text: d.descripcion || "Sin descripción" }),
+        txtPasos,
+      ]),
+    ]);
+  });
+  abrirModal({
+    titulo: "Elegir DEMO",
+    cuerpo: [
+      el("p", { class: "small text-secondary-emphasis", text: "La DEMO mueve la excavadora sola, paso a paso. DETENER la cancela en cualquier momento." }),
+      el("div", { class: "demo-lista", attrs: { role: "radiogroup", "aria-label": "DEMO disponibles" } }, opciones),
+    ],
+    acciones: [
+      crear,
+      { texto: "Cancelar", clase: "btn-outline-secondary" },
+      {
+        texto: "Iniciar DEMO", clase: "btn-primary", tipo: "submit",
+        alPulsar: async ({ form }) => {
+          const d = demos.find((x) => x.id_demo === Number(form.elements.demo.value));
+          if (!d) throw new Error("Elige una DEMO.");
+          if (!puedeMover()) throw new Error("Control bloqueado: " + motivoBloqueo());
+          if (!(await iniciarDemoElegida(d))) throw new Error("No se pudo iniciar la DEMO.");
+        },
+      },
+    ],
+    alAbrir: () => {
+      // Número de pasos y duración aproximada de cada DEMO (consulta sin clave).
+      for (const d of demos) {
+        api.movimientosDemo(V, d.id_demo).then((m) => {
+          const seg = m.reduce((t, x) => t + x.duracion_ms + x.pausa_ms, 0) / 1000;
+          const n = pasos.get(d.id_demo);
+          if (!m.length) {
+            n.textContent = "Sin pasos: agrégalos en Administración";
+            n.closest("label").querySelector("input").disabled = true;
+          } else n.textContent = `${m.length} paso${m.length === 1 ? "" : "s"} · ~${seg.toFixed(seg < 10 ? 1 : 0)} s`;
+        }).catch(() => { pasos.get(d.id_demo).textContent = "No se pudieron consultar los pasos"; });
+      }
+    },
+  });
 }
 
 btnDemo.addEventListener("click", async () => {
   if (demo.activa) { await detenerTodo(O.boton); return; }
-  const d = demoElegida();
-  if (!d) { toast("No hay DEMO activas: créalas en Administración.", "error"); return; }
   if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
-  if (Date.now() >= confirmarDemoHasta) {                  // primer toque: pide confirmación
-    confirmarDemoHasta = Date.now() + CONFIRMAR_MS;
-    vibrar(15);
-    pintarBotonDemo();
-    setTimeout(pintarBotonDemo, CONFIRMAR_MS + 50);
-    return;
-  }
-  confirmarDemoHasta = 0;
-  await iniciarDemoElegida(d);
+  abrirPanelDemo();
 });
 demoPreferida.alCambiar(V, pintarBotonDemo);
+
+/* ------------------------ Accesorios interruptor ------------------------ */
+/* Luz, sonido y encendido alternan su estado con cada orden. El estado se toma
+   de lo que difunde el servidor por WSS (incluye órdenes de otros clientes y de
+   la DEMO) y se recuerda en este navegador. No hay confirmación del ESP. */
+const LLAVE_INTERRUPTORES = `vehiculoIot.interruptores.${V}`;
+const interruptores = (() => {
+  try { return JSON.parse(localStorage.getItem(LLAVE_INTERRUPTORES) || "{}") || {}; } catch { return {}; }
+})();
+for (const [c, on] of Object.entries(interruptores)) botonera.setInterruptor(Number(c), on);
+
+function alternarInterruptor(codigo, { avisar }) {
+  const txt = CONFIG.interruptores[codigo];
+  if (!txt) return;
+  interruptores[codigo] = !interruptores[codigo];
+  try { localStorage.setItem(LLAVE_INTERRUPTORES, JSON.stringify(interruptores)); } catch { /* */ }
+  botonera.setInterruptor(codigo, interruptores[codigo]);
+  const mensaje = interruptores[codigo] ? txt.on : txt.off;
+  log(catalogo.porCodigo(codigo)?.nombre || "Accesorio", mensaje);
+  if (avisar) toast(mensaje, interruptores[codigo] ? "ok" : "info");
+}
 
 demo.addEventListener("cambio", (e) => {
   pintarBotonDemo();
@@ -407,6 +472,10 @@ ws.addEventListener("mensaje", (e) => {
   const ev = e.detail;
   if (ev.evento === "pong") return;
   const deDemo = demo.procesarEvento(ev);
+  if (ev.evento === "movimiento_individual" && ev.codigo != null) comandos.registrarEventoServidor(ev.codigo);
+  if ((ev.evento === "movimiento_individual" || ev.evento === "demo_movimiento") && CONFIG.interruptores[ev.codigo]) {
+    alternarInterruptor(ev.codigo, { avisar: ev.evento === "movimiento_individual" });   // la DEMO no llena de avisos
+  }
   if (ev.evento === "movimiento_individual" || ev.evento === "demo_movimiento") botonera.marcarActivo(ev.codigo);
   if (ev.evento === "demo_movimiento") log("DEMO", `paso ${ev.datos.orden}/${ev.datos.total_movimientos}: ${ev.comando}`);
   if (ev.evento === "error" && !deDemo) toast(ev.datos.detalle || "La API informó un error.", "error");

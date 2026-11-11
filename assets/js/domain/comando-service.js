@@ -8,8 +8,12 @@
  *    "pendiente" y reemplaza a cualquier pendiente anterior (gana la última).
  *  - Ignora duplicados (mismo código ya en vuelo o pendiente).
  *  - DETENER tiene prioridad absoluta: descarta lo pendiente, no espera la
- *    cola, se reintenta una vez ante fallo de red y, si una orden anterior
- *    se confirma DESPUÉS de pedir el paro, se reafirma DETENER.
+ *    cola y se reintenta una vez ante fallo de red.
+ *  - Orden tardía: si un movimiento enviado ANTES del paro se confirma
+ *    DESPUÉS, no se reenvía DETENER a ciegas (eso duplicaba el paro). Se
+ *    comprueba con el WebSocket, que difunde los movimientos en el orden en
+ *    que el servidor los procesó: solo si el último evento no es DETENER se
+ *    reafirma. Sin WSS no se puede comprobar y se reafirma por seguridad.
  *  - Una respuesta HTTP 201 significa "registrado en la API", NO "ejecutado
  *    por el vehículo".
  */
@@ -22,14 +26,19 @@ export const FASE = Object.freeze({
   DESCARTADO: "descartado",
 });
 
+/** Espera para que lleguen por WSS los eventos de la orden tardía y del paro. */
+const VERIFICAR_MS = 700;
+
 export class ComandoService extends EventTarget {
   /**
    * @param {{api: object, vehiculoId: number, obtenerCatalogo: () => import("./catalogo.js").Catalogo,
-   *          demoActiva: () => boolean}} op
+   *          demoActiva: () => boolean, wsActivo?: () => boolean}} op
    */
-  constructor({ api, vehiculoId, obtenerCatalogo, demoActiva }) {
+  constructor({ api, vehiculoId, obtenerCatalogo, demoActiva, wsActivo = () => false }) {
     super();
-    Object.assign(this, { api, vehiculoId, obtenerCatalogo, demoActiva });
+    Object.assign(this, { api, vehiculoId, obtenerCatalogo, demoActiva, wsActivo });
+    this.ultimoServidor = null;   // último código difundido por el servidor (WSS), en su orden real
+    this.verificacion = null;     // temporizador de la comprobación de un paro con orden tardía
     this.generacion = 0;
     this.enVuelo = null;        // {codigo, origen, gen}
     this.pendiente = null;      // {codigo, origen, gen, promesa, resolver}
@@ -66,6 +75,7 @@ export class ComandoService extends EventTarget {
       this._descartarPendiente("reemplazado");
     }
 
+    this._cancelarVerificacion();          // una orden nueva tras el paro es intencional: no hay que reafirmar nada
     const item = { codigo, origen, gen: this.generacion };
     if (this.enVuelo || this.paroEnVuelo) {
       item.promesa = new Promise((r) => { item.resolver = r; });
@@ -142,7 +152,7 @@ export class ComandoService extends EventTarget {
         this._fase(item.codigo, FASE.DESCARTADO);
         res = { ok: true, estado: "tardio", respuesta: r };
         this.enVuelo = null;
-        this._reafirmarParo(item.origen);
+        this._verificarParo(item.origen);
       } else {
         this._fase(item.codigo, FASE.ACEPTADO, "", r);
         res = { ok: true, estado: "aceptado", respuesta: r };
@@ -157,6 +167,32 @@ export class ComandoService extends EventTarget {
     }
     this._siguiente();
     return res;
+  }
+
+  /** La página informa cada movimiento que difunde el servidor por WSS (en su orden real). */
+  registrarEventoServidor(codigo) {
+    this.ultimoServidor = codigo;
+  }
+
+  /**
+   * Hubo una orden tardía: ¿el servidor la aplicó antes o después del paro?
+   * Se espera un momento a que lleguen los eventos WSS y se mira el último.
+   */
+  _verificarParo(origen) {
+    if (!this.wsActivo()) { this._reafirmarParo(origen); return; }   // sin WSS no se puede saber: por seguridad
+    this._cancelarVerificacion();
+    this.verificacion = setTimeout(() => {
+      this.verificacion = null;
+      const det = this.obtenerCatalogo().detener;
+      if (!det) return;
+      if (this.paroEnVuelo) { this._verificarParo(origen); return; }  // aún no responde el paro: volver a mirar
+      if (this.ultimoServidor !== det.codigo) this._reafirmarParo(origen);
+    }, VERIFICAR_MS);
+  }
+
+  _cancelarVerificacion() {
+    clearTimeout(this.verificacion);
+    this.verificacion = null;
   }
 
   _reafirmarParo(origen) {

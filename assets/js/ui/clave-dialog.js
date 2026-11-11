@@ -15,10 +15,13 @@ function pintarBoton() {
   if (!b) return;
   const rol = claveStore.rol();
   const tiene = !!claveStore.obtener();
-  b.querySelector("span").textContent = tiene ? (ROLES[rol] || "Clave guardada") : "Sin clave";
+  const libre = claveStore.esLibre();
+  b.querySelector("span").textContent = libre ? "Acceso de prueba" : tiene ? (ROLES[rol] || "Clave guardada") : "Sin clave";
   b.classList.toggle("btn-outline-warning", !tiene);
-  b.classList.toggle("btn-outline-success", tiene);
-  b.setAttribute("aria-label", tiene ? `Clave de ${ROLES[rol] || "operador"} guardada. Cambiar clave` : "Escribir clave de operador");
+  b.classList.toggle("btn-outline-success", tiene && !libre);
+  b.classList.toggle("btn-outline-info", libre);
+  b.setAttribute("aria-label", libre ? "Acceso de prueba sin clave activo. Escribir otra clave"
+    : tiene ? `Clave de ${ROLES[rol] || "operador"} guardada. Cambiar clave` : "Escribir clave de operador");
 }
 
 export function abrirDialogoClave({ motivo = "" } = {}) {
@@ -60,6 +63,7 @@ export async function inicializarClave() {
   if (!clave) return;
   try {
     const { rol } = await api.sesion();
+    if (claveStore.esLibre()) { claveStore.fijarRol(rol); return; }      // acceso de prueba: no se guarda la clave
     claveStore.guardar(clave, { recordar: claveStore.recordada(), rolValidado: rol });
   } catch (e) {
     if (e.status === 401) {

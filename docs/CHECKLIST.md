@@ -4,6 +4,7 @@
 - [x] Página por HTTPS y socket por WSS; `HttpClient` y `WsClient` rechazan `http://` / `ws://` en una página HTTPS (sin mixed content).
 - [x] Sin contraseñas, tokens, claves AWS ni datos de RDS en el repositorio; el navegador nunca habla con MySQL.
 - [x] `X-API-Key` escrita por el usuario, validada con `GET /sesion`, en `sessionStorage` por defecto.
+- [ ] **Pendiente al terminar las pruebas:** desactivar `accesoLibre` en `assets/js/config.js`, borrar la clave de prueba del archivo y cambiarla en el backend (mientras esté activo, la clave es pública).
 - [x] CORS del backend limitado al origen de GitHub Pages, métodos GET/POST y cabeceras `Content-Type`, `X-API-Key`, sin credenciales. CORS no se usa como autenticación.
 - [x] Content-Security-Policy: scripts solo propios y de jsDelivr (con SRI), `connect-src` limitado a la API, sin `unsafe-inline`.
 - [x] JSON remoto validado y reducido a campos conocidos (`validadores.js`); eventos WSS de otro vehículo se descartan.
@@ -14,7 +15,7 @@
 ## Resiliencia
 - [x] Timeout por petición con `AbortController`; mensajes distintos para red/CORS, timeout, 400–503.
 - [x] Una orden en vuelo; cola de un elemento (gana la última); duplicados ignorados.
-- [x] DETENER: prioridad, reintento ante fallo de red y reafirmación si una orden previa llega tarde.
+- [x] DETENER: prioridad, reintento ante fallo de red y reafirmación solo si el WSS muestra que una orden previa quedó después del paro (sin duplicar DETENER).
 - [x] Respuestas tardías de salud ignoradas (número de secuencia).
 - [x] WSS: reconexión exponencial con jitter, latido `ping/pong`, reconexión al volver la red o la pestaña, sin reconexión ante `4404`.
 - [x] Al perder WSS, soltar el puntero, ocultar la pestaña o perder el foco: se suelta el joystick y se envía DETENER.

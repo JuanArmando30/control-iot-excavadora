@@ -1,7 +1,7 @@
 /**
- * DEMO que ejecuta el botón «Demo» de Control. Se elige en Administración
- * («Usar en Control») y se guarda en este navegador (el backend no tiene un
- * campo para esto). Si no hay elección válida se usa la primera DEMO activa.
+ * Última DEMO elegida en el panel «Demo» de Control (aparece preseleccionada
+ * y es la que inicia la voz con «inicia la demo»). Se guarda en este navegador.
+ * Si no hay elección válida se usa la primera DEMO activa.
  */
 const llave = (idVehiculo) => `vehiculoIot.demoControl.${idVehiculo}`;
 
