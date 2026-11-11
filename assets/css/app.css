@@ -293,10 +293,31 @@ body {
 
 .secundarios { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); min-height: 0; }
 /* Fila central: accesorios del catálogo + Demo, todos en la misma rejilla */
-.fila-centro { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); min-height: 0; }
+/* Flex con ajuste centrado: si no caben los 4 en una fila, la Demo pasa abajo CENTRADA (no pegada a un lado). */
+.fila-centro { --base: 60px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 0; }
 .fila-centro > .secundarios { display: contents; }
+.fila-centro .cbtn-sec { flex: 1 1 var(--base); max-width: calc((100% - 12px) / 3); }
+.fila-centro .vacio { flex: 1 1 100%; }
 .cbtn-demo { --avance: 0%; border-color: #6b5bd6; background: linear-gradient(180deg, #2b2a7a, #191a55); }
-.cbtn-demo.is-confirmar { border-color: var(--medio); color: var(--medio); box-shadow: 0 0 16px #ffc85755; }
+/* Accesorio encendido: color ámbar y etiqueta «ON» hasta que se apague */
+.cbtn-sec.is-on { border-color: #ffc857; color: #fff3cf; background: linear-gradient(180deg, #6a5414, #3b2e09); box-shadow: 0 0 16px #ffc85755; }
+.cbtn-sec.is-on .ico { color: #ffc857; filter: drop-shadow(0 0 6px #ffc857aa); }
+.cbtn-sec.is-on::after {
+  content: attr(data-estado); position: absolute; top: 3px; right: 4px; padding: 0 4px; border-radius: 99px;
+  font-size: .5rem; font-weight: 800; letter-spacing: .06em; line-height: 1.5; background: #ffc857; color: #1a1300;
+}
+/* Panel para elegir la DEMO */
+.demo-lista { display: grid; gap: 8px; }
+.demo-opcion {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--panel-borde); background: #0a1434;
+}
+.demo-opcion:has(input:checked) { border-color: var(--violeta); background: #1b1d5a; box-shadow: 0 0 14px #7c8cff44; }
+.demo-opcion:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+.demo-opcion input { margin-top: 4px; flex: none; accent-color: var(--violeta); }
+.demo-opcion-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.demo-opcion-txt small { color: var(--tenue); overflow-wrap: anywhere; }
+.demo-opcion-txt .demo-pasos { color: var(--acento); font-weight: 600; }
 .cbtn-demo.is-demo {
   border-color: var(--violeta); color: #fff;
   background: linear-gradient(90deg, #5a4bd6 var(--avance), #191a55 var(--avance));
@@ -445,7 +466,6 @@ body {
 .tabla-eventos .detalle { min-width: 220px; overflow-wrap: anywhere; }
 .acciones { text-align: right; white-space: nowrap; }
 .acciones .btn { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; min-width: 36px; justify-content: center; margin-left: 4px; }
-.badge-control { background: #ffb02e; color: #1a1300; }
 .badge.ev-movimiento { background: #1f7a5e; } .badge.ev-demo { background: #4b3aa8; }
 .badge.ev-estado { background: #2a4a8f; } .badge.ev-error { background: #a8344f; } .badge.ev-sistema { background: #3a4466; }
 
@@ -554,7 +574,7 @@ body {
   .pad, .vista-voz { margin-top: 0; }
   .pad-centro { justify-content: center; }
   .cruceta { width: min(100cqw, 100cqh, 340px); height: auto; aspect-ratio: 1; }
-  .secundarios, .fila-centro { grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); }
+  .fila-centro { --base: 50px; }
   .stop { min-height: 56px; letter-spacing: .1em; }
 }
 @media (orientation: landscape) and (max-width: 899.98px), (min-width: 700px) and (max-width: 899.98px) {
