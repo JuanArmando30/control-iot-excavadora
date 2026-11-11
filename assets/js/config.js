@@ -107,11 +107,13 @@ export const CONFIG = Object.freeze({
    * Accesorios que funcionan como INTERRUPTOR (cada orden alterna el estado).
    * El botón muestra si quedó encendido y aparece un aviso breve. El estado se
    * deduce de las órdenes que difunde el servidor por WSS (sin confirmación del ESP).
+   * `inicial`: estado con el que arranca el vehículo (luz, sonido y
+   * excavadora arrancan encendidos).
    */
   interruptores: Object.freeze({
-    10: Object.freeze({ on: "Luz encendida", off: "Luz apagada", botonOn: "Luz ON" }),
-    11: Object.freeze({ on: "Sonido activado", off: "Sonido desactivado", botonOn: "Sonido ON" }),
-    12: Object.freeze({ on: "Excavadora encendida", off: "Excavadora apagada", botonOn: "Encendida" }),
+    10: Object.freeze({ on: "Luz encendida", off: "Luz apagada", botonOn: "Luz ON", inicial: true }),
+    11: Object.freeze({ on: "Sonido activado", off: "Sonido desactivado", botonOn: "Sonido ON", inicial: true }),
+    12: Object.freeze({ on: "Excavadora encendida", off: "Excavadora apagada", botonOn: "Encendida", inicial: true }),
   }),
 
   /**

@@ -431,9 +431,18 @@ demoPreferida.alCambiar(V, pintarBotonDemo);
 /* Luz, sonido y encendido alternan su estado con cada orden. El estado se toma
    de lo que difunde el servidor por WSS (incluye órdenes de otros clientes y de
    la DEMO) y se recuerda en este navegador. No hay confirmación del ESP. */
-const LLAVE_INTERRUPTORES = `vehiculoIot.interruptores.${V}`;
+// v3: los estados guardados antes suponían otro estado inicial (quedaron invertidos); se descartan.
+const LLAVE_INTERRUPTORES = `vehiculoIot.interruptores.v3.${V}`;
+try {
+  localStorage.removeItem(`vehiculoIot.interruptores.${V}`);
+  localStorage.removeItem(`vehiculoIot.interruptores.v2.${V}`);
+} catch { /* */ }
 const interruptores = (() => {
-  try { return JSON.parse(localStorage.getItem(LLAVE_INTERRUPTORES) || "{}") || {}; } catch { return {}; }
+  let guardado = {};
+  try { guardado = JSON.parse(localStorage.getItem(LLAVE_INTERRUPTORES) || "{}") || {}; } catch { /* */ }
+  // Sin dato guardado, cada accesorio arranca con su estado inicial (luz y excavadora encendidas).
+  return Object.fromEntries(Object.entries(CONFIG.interruptores)
+    .map(([c, t]) => [c, typeof guardado[c] === "boolean" ? guardado[c] : !!t.inicial]));
 })();
 for (const [c, on] of Object.entries(interruptores)) botonera.setInterruptor(Number(c), on);
 
