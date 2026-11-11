@@ -4,6 +4,8 @@
  * - Solo notifica CAMBIOS de dirección (nunca por píxel o fotograma).
  * - Al soltar, cancelar o perder el puntero vuelve al centro y notifica null.
  * - Teclado: con el joystick enfocado, las flechas lo mueven y al soltar vuelve.
+ * - `pausado`: ignora nuevas pulsaciones sin cambiar su aspecto (lo usa la
+ *   página mientras el otro joystick está sostenido: una orden a la vez).
  */
 
 const ANGULO = { derecha: 0, abajo: 90, izquierda: 180, arriba: -90 };   // eje Y hacia abajo
@@ -23,6 +25,7 @@ export class Joystick {
     this.pid = null;
     this.dir = null;
     this.habilitado = false;
+    this.pausado = false;
     this.disponibles = new Set();
     this.frame = 0;
     this.ultimoPunto = null;
@@ -67,7 +70,7 @@ export class Joystick {
   }
 
   _down(e) {
-    if (!this.habilitado || this.pid !== null) return;
+    if (!this.habilitado || this.pausado || this.pid !== null) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.preventDefault();
     this.pid = e.pointerId;
@@ -116,7 +119,7 @@ export class Joystick {
     e.preventDefault();
     e.stopPropagation();
     if (abajo) {
-      if (!this.habilitado || e.repeat || this.teclaActiva === dir) return;
+      if (!this.habilitado || this.pausado || e.repeat || this.teclaActiva === dir) return;
       if (!this.disponibles.has(dir)) return;
       this.teclaActiva = dir;
       const desp = { arriba: [0, -1], abajo: [0, 1], izquierda: [-1, 0], derecha: [1, 0] }[dir];

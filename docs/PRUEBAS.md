@@ -13,15 +13,19 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | J5 | Arrastra y saca el dedo/ratón fuera de la página o cambia de pestaña | DETENER (pointercancel / lostpointercapture / blur) |
 | J6 | Movimientos rápidos arriba ↔ abajo | Nunca dos órdenes a la vez; si una está en vuelo, la siguiente queda en cola y gana la última |
 | J7 | Teclado: Tab hasta el joystick, mantén ↑, suelta | Igual que J1 y J4 |
+| J8 | Joystick derecho (Brazo y pala): arrastra arriba, luego a un lado, suelta | `POST` SUBIR_BRAZO, luego GIRAR_PALA_… (origen `WEB_JOYSTICK`); al soltar, DETENER |
+| J9 | Mantén un joystick y toca el otro (multitáctil) | El segundo no responde: solo un joystick sostenido a la vez |
 
-## B · Botones y cruceta (modo Pulso)
+## B · Botones y crucetas (modo Pulso)
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
 | B1 | Toca «Avanzar» | Estado *Enviando* (borde ámbar) → *Aceptado* (verde); mensaje «registrado» |
 | B2 | Toca «Avanzar» dos veces muy rápido | Un solo `POST` (duplicado ignorado mientras el primero viaja) |
-| B3 | Revisa los botones secundarios | Solo aparecen comandos **activos** del catálogo; desactiva uno en Administración y recarga: desaparece |
-| B4 | Mantén el joystick y toca un secundario (multitáctil) | Secundarios deshabilitados mientras hay una dirección sostenida |
+| B3 | Revisa los botones del centro (Luz, Sonido, On / Off) | Solo aparecen comandos **activos** del catálogo; desactiva uno en Administración y recarga: desaparece |
+| B3b | Cruceta derecha: Subir, Bajar, Pala izq., Pala der. | `POST` con los códigos 5, 6, 7 y 8 (origen `WEB_PULSO`); si desactivas uno en Administración, su botón queda «No disponible» |
+| B3c | Teclado en modo Pulso: `I`, `K`, `J`, `L` | SUBIR_BRAZO, BAJAR_BRAZO, GIRAR_PALA_IZQUIERDA, GIRAR_PALA_DERECHA (origen `WEB_TECLADO`) |
+| B4 | Mantén un joystick y toca un botón del centro (multitáctil) | Botones centrales deshabilitados mientras hay una dirección sostenida; DETENER sigue activo |
 | B5 | Quita la clave (Olvidar clave) | Controles deshabilitados y aviso «Falta la clave» |
 
 ## D · DETENER
@@ -60,10 +64,10 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 
 | # | Dispositivo | Verificar |
 |---|---|---|
-| R1 | Teléfono vertical (360–412 px) | Control completo sin scroll: indicadores, mando, acciones, DETENER y pie visibles a la vez |
-| R2 | Teléfono horizontal | Mando a la izquierda, pestañas y acciones a la derecha, sin scroll |
-| R3 | Tableta y escritorio | Dos columnas; indicadores en una fila |
-| R4 | Teclado solo | Foco visible en todo; pestañas de modo con ← → |
+| R1 | Teléfono vertical (360–412 px) | Control completo sin scroll: menú con indicadores WSS · AWS · RDS integrados (tocarlos comprueba al instante; el detalle está en el texto emergente), los dos mandos lado a lado, Luz · Sonido · On/Off, DETENER y pie visibles a la vez |
+| R2 | Teléfono horizontal | Como un control real: conducción a la izquierda, centro con modos, Luz · Sonido · On/Off y DETENER, brazo y pala a la derecha; indicadores dentro del menú; sin scroll |
+| R3 | Tableta y escritorio | Misma distribución mando · centro · mando; indicadores en una fila |
+| R4 | Teclado solo | Foco visible en todo; modos con Tab + Enter; flechas/WASD conducen, IJKL mueven brazo y pala |
 
 ## W · Verificación independiente del WebSocket
 

@@ -1,22 +1,28 @@
 /**
- * Cruceta (modo Pulso) y botones secundarios generados desde el catálogo.
+ * Crucetas (modo Pulso) de los dos mandos y botones centrales generados
+ * desde el catálogo.
  * Estados visibles: normal, presionado, enviando, aceptado, error, deshabilitado.
  */
 import { CONFIG } from "../config.js";
-import { Catalogo, DIRECCIONES } from "../domain/catalogo.js";
+import { Catalogo, DIRECCIONES, MANDOS } from "../domain/catalogo.js";
 import { FASE } from "../domain/comando-service.js";
 import { el, icono, vibrar } from "./dom.js";
 
 const ICONO_DIR = { arriba: "i-up", abajo: "i-down", izquierda: "i-left", derecha: "i-right" };
+const ICONO_EJE = { conduccion: "i-gamepad", brazo: "i-arm" };
+const SIN_COMANDO = {
+  conduccion: { arriba: "avanzar", abajo: "retroceder", izquierda: "girar a la izquierda", derecha: "girar a la derecha" },
+  brazo: { arriba: "subir el brazo", abajo: "bajar el brazo", izquierda: "girar la pala a la izquierda", derecha: "girar la pala a la derecha" },
+};
 const DURACION_FLASH = 1300;
 
 export class Botonera {
   /**
-   * @param {{cruceta: HTMLElement, secundarios: HTMLElement,
-   *          onPulsar: (codigo:number, origenUi:string) => void, onDetener: () => void}} op
+   * @param {{crucetas: {conduccion: HTMLElement, brazo: HTMLElement}, secundarios: HTMLElement,
+   *          onPulsar: (codigo:number, origenUi:"cruceta"|"boton") => void}} op
    */
-  constructor({ cruceta, secundarios, onPulsar, onDetener }) {
-    Object.assign(this, { cruceta, secundarios, onPulsar, onDetener });
+  constructor({ crucetas, secundarios, onPulsar }) {
+    Object.assign(this, { crucetas, secundarios, onPulsar });
     this.botones = new Map();          // codigo → [botones]
     this.timers = new Map();
     this.habilitado = false;
@@ -26,27 +32,23 @@ export class Botonera {
   render(catalogo) {
     this.botones.clear();
 
-    // ---- Cruceta ----
-    const piezas = DIRECCIONES.map((dir) => {
-      const cmd = catalogo.direccion(dir);
-      const b = this._boton(cmd, { icono: ICONO_DIR[dir], clase: `cbtn dir-${dir}`, origen: "cruceta",
-        sinCatalogo: `Sin comando para ${dir}` });
-      return b;
-    });
-    const stop = el("button", {
-      class: "cbtn-stop", attrs: { type: "button", "aria-label": "Detener" },
-      on: {
-        pointerdown: (e) => { e.preventDefault(); this.onDetener(); },
-        click: (e) => { if (e.detail === 0) this.onDetener(); },
-      },
-    }, [icono("i-stop")]);
-    this.cruceta.replaceChildren(piezas[0], piezas[2], el("div", { class: "cbtn-centro" }, [stop]), piezas[3], piezas[1]);
+    // ---- Crucetas: una por mando ----
+    for (const [mando, contenedor] of Object.entries(this.crucetas)) {
+      const piezas = DIRECCIONES.map((dir) => this._boton(catalogo.direccion(dir, mando), {
+        icono: mando === "conduccion" ? ICONO_DIR[dir] : (CONFIG.iconos[MANDOS[mando][dir]] || ICONO_DIR[dir]),
+        clase: `cbtn dir-${dir}`,
+        origen: "cruceta",
+        sinCatalogo: `Sin comando para ${SIN_COMANDO[mando][dir]}`,
+      }));
+      const eje = el("div", { class: "cruceta-eje", attrs: { "aria-hidden": "true" } }, [icono(ICONO_EJE[mando])]);
+      contenedor.replaceChildren(...piezas, eje);
+    }
 
-    // ---- Secundarios ----
+    // ---- Centro: luz, sonido, encendido y cualquier otro comando activo ----
     const sec = catalogo.secundarios();
     if (!sec.length) {
       this.secundarios.replaceChildren(el("p", { class: "vacio", text: catalogo.cargado
-        ? "El catálogo no tiene comandos adicionales activos."
+        ? "Sin acciones adicionales activas."
         : "Catálogo no disponible." }));
     } else {
       this.secundarios.replaceChildren(...sec.map((c) =>
@@ -65,7 +67,11 @@ export class Botonera {
         "aria-label": cmd ? etiqueta : sinCatalogo,
       },
       dataset: cmd ? { codigo: cmd.codigo } : {},
-    }, [icono(ic), el("span", { class: "cbtn-txt", text: etiqueta }), el("span", { class: "cbtn-estado", attrs: { "aria-hidden": "true" } })]);
+    }, [
+      icono(ic),
+      el("span", { class: "cbtn-txt", text: cmd ? Catalogo.etiquetaCorta(cmd) : etiqueta }),
+      el("span", { class: "cbtn-estado", attrs: { "aria-hidden": "true" } }),
+    ]);
 
     if (!cmd) { b.disabled = true; b.classList.add("sin-catalogo"); return b; }
 

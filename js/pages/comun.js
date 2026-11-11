@@ -6,13 +6,18 @@ import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
 import { WsClient } from "../core/ws-client.js";
 import { ConectividadService } from "../domain/conectividad-service.js";
-import { ConectividadPanel } from "../ui/conectividad-panel.js";
+import { ConectividadPanel, EstadoBarra } from "../ui/conectividad-panel.js";
 import { $, toast } from "../ui/dom.js";
 
-export function iniciarConectividad({ compacto = false } = {}) {
+/**
+ * @param {{compacto?: boolean, barra?: boolean}} op `barra`: indicadores
+ *   discretos dentro del menú superior (Control) en lugar del panel completo.
+ */
+export function iniciarConectividad({ compacto = false, barra = false } = {}) {
   const t = CONFIG.tiempos;
   const conectividad = new ConectividadService({ api, intervaloMs: t.saludCadaMs });
-  new ConectividadPanel($("panelConectividad"), conectividad, { compacto });
+  if (barra) new EstadoBarra($("panelConectividad"), conectividad);
+  else new ConectividadPanel($("panelConectividad"), conectividad, { compacto });
 
   const ws = new WsClient({
     url: CONFIG.wsUrl(CONFIG.vehiculoId),

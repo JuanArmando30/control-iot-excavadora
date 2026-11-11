@@ -24,13 +24,13 @@
 - [x] HTML semántico, enlace «Saltar al contenido», encabezados ordenados, `lang="es"`.
 - [x] Foco visible (contorno cian de 3 px) en todos los controles.
 - [x] Estados con texto + icono + color (no solo color); contraste de texto ≥ 4.5:1 sobre fondo oscuro.
-- [x] Áreas táctiles ≥ 40 px (botones de control 60–72 px, DETENER 64 px).
-- [x] Joystick, cruceta, pestañas y DETENER utilizables con teclado.
+- [x] Áreas táctiles ≥ 40 px (botones de los mandos 46–100 px según pantalla, DETENER ≥ 56 px; en horizontal ocupa el centro del mando).
+- [x] Joysticks, crucetas, modos y DETENER utilizables con teclado.
 - [x] Regiones `aria-live` para cambios de conectividad, joystick, DEMO y voz.
 - [x] `prefers-reduced-motion` respetado.
 
 ## GitHub Pages
 - [x] Rutas relativas (funciona en `/<repositorio>/`), `.nojekyll`.
-- [x] Favicon SVG + ICO + PNG + apple-touch-icon enlazados en los tres HTML.
-- [x] Pie «Desarrollado por Juan Armando Castillo Rodríguez · 2026» en el flujo del documento, debajo de DETENER (sin superposición).
+- [x] Favicon ICO + PNG + apple-touch-icon + ícono maskable enlazados en los tres HTML.
+- [x] Pie «Desarrollado por Juan Armando Castillo Rodríguez · 2026» en el flujo del documento, debajo del mando (sin superposición).
 - [ ] Verificar en la URL publicada: favicon en la pestaña, pie visible, consola sin errores (requiere el parche CORS aplicado).

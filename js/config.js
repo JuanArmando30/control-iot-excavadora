@@ -89,13 +89,29 @@ export const CONFIG = Object.freeze({
    */
   direcciones: Object.freeze({ arriba: 1, abajo: 2, izquierda: 3, derecha: 4 }),
 
+  /**
+   * Mando derecho (brazo y pala): mismo criterio que `direcciones`.
+   * arriba/abajo = subir/bajar brazo · izquierda/derecha = girar pala.
+   */
+  brazo: Object.freeze({ arriba: 5, abajo: 6, izquierda: 7, derecha: 8 }),
+
   /** El backend identifica el paro por nombre (comando_service.buscar_detener). */
   nombreDetener: "DETENER",
 
-  /** Icono opcional por código para los botones secundarios (solo estética). */
+  /** Icono opcional por código (solo estética). */
   iconos: Object.freeze({
     1: "i-up", 2: "i-down", 3: "i-left", 4: "i-right",
     5: "i-chev-up", 6: "i-chev-down", 7: "i-rot-l", 8: "i-rot-r",
     10: "i-bulb", 11: "i-sound", 12: "i-power",
+  }),
+
+  /**
+   * Texto corto opcional por código para botones pequeños (solo estética).
+   * El nombre completo del catálogo sigue en `title` y `aria-label`.
+   */
+  etiquetasCortas: Object.freeze({
+    2: "Atrás", 3: "Izquierda", 4: "Derecha",
+    5: "Subir", 6: "Bajar", 7: "Pala izq.", 8: "Pala der.",
+    12: "On / Off",
   }),
 });

@@ -1,6 +1,8 @@
 /**
- * Página de CONTROL: tres modos de manejo (Pulso, Joystick, Voz), acciones
- * del catálogo, DETENER y panel de conectividad, todo en una sola pantalla.
+ * Página de CONTROL: mando horizontal con dos controles (conducción a la
+ * izquierda, brazo y pala a la derecha), bloque central (luz, sonido,
+ * encendido y DETENER), tres modos de manejo (Pulso, Joystick, Voz) y panel
+ * de conectividad, todo en una sola pantalla.
  * Estado, DEMO y mensajes están en Monitoreo. La DEMO se sigue vigilando
  * aquí para bloquear el mando mientras corre y para que DETENER la cancele.
  */
@@ -8,7 +10,7 @@ import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
 import { claveStore } from "../core/clave-store.js";
 import { WS } from "../core/ws-client.js";
-import { Catalogo } from "../domain/catalogo.js";
+import { Catalogo, DIRECCIONES } from "../domain/catalogo.js";
 import { ComandoService, FASE } from "../domain/comando-service.js";
 import { DemoService } from "../domain/demo-service.js";
 import { interpretar, FRASES_EJEMPLO } from "../domain/interprete-voz.js";
@@ -23,22 +25,24 @@ const V = CONFIG.vehiculoId;
 const O = CONFIG.origen;
 const MODOS = ["pulso", "joystick", "voz"];
 const AYUDA = {
-  pulso: "Pulso: cada toque envía una orden; el vehículo la ejecuta un instante y se detiene solo.",
-  joystick: "Joystick: arrastra la perilla; solo se envía una orden al cambiar de dirección. Al soltar vuelve al centro y se envía DETENER.",
+  pulso: "Pulso: cada toque envía una orden. Izquierda: conducción · derecha: brazo y pala.",
+  joystick: "Joystick: arrastra una perilla (una a la vez); al soltar vuelve al centro y se envía DETENER.",
   voz: "Voz: cada frase es una orden. Di «alto» para detener al instante.",
 };
+const NOMBRE_MANDO = { conduccion: "Conducción", brazo: "Brazo y pala" };
 
 /* ------------------------------ Estado ------------------------------ */
 let catalogo = new Catalogo();
 let wsAbierto = false;
 let modo = leerModo();
-const mantener = { dir: null, timer: null };
+/** Dirección sostenida en modo Joystick. Solo un mando a la vez (una orden en vuelo). */
+const mantener = { mando: null, dir: null, timer: null };
 
 const demo = new DemoService({ api, vehiculoId: V });
 const comandos = new ComandoService({
   api, vehiculoId: V, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa,
 });
-const { ws } = iniciarConectividad({ compacto: true });
+const { ws } = iniciarConectividad({ barra: true });
 /** Una sola línea de retroalimentación (sustituye a la lista de mensajes). */
 const log = (etq, txt) => {
   const p = $("lineaEstado");
@@ -47,13 +51,24 @@ const log = (etq, txt) => {
 };
 
 /* ------------------------------ Vista ------------------------------- */
+const mandoEl = $("mando");
 const botonera = new Botonera({
-  cruceta: $("cruceta"),
+  crucetas: { conduccion: $("cruceta"), brazo: $("crucetaBrazo") },
   secundarios: $("secundarios"),
   onPulsar: (codigo, origenUi) => enviar(codigo, origenUi === "cruceta" ? O.pulso : O.boton),
-  onDetener: () => detenerTodo(O.pulso),
 });
-const joystick = new Joystick($("joystick"), $("joyPerilla"), { onDireccion: alCambiarDireccion });
+const joysticks = {
+  conduccion: new Joystick($("joystick"), $("joyPerilla"), { onDireccion: (d) => alCambiarDireccion("conduccion", d) }),
+  brazo: new Joystick($("joystickBrazo"), $("joyPerillaBrazo"), { onDireccion: (d) => alCambiarDireccion("brazo", d) }),
+};
+const algunJoystickActivo = () => Object.values(joysticks).some((j) => j.activo);
+
+function soltarMantenido() {
+  clearInterval(mantener.timer);
+  mantener.timer = null;
+  mantener.dir = null;
+  mantener.mando = null;
+}
 
 /* ------------------------- Envío de comandos ------------------------ */
 function puedeMover() {
@@ -79,10 +94,8 @@ function detenerMovimiento(origen) {
 /** DETENER global: cancela la DEMO si corre; si no, envía DETENER. */
 async function detenerTodo(origen = O.boton) {
   vibrar(40);
-  clearInterval(mantener.timer);
-  mantener.timer = null;
-  mantener.dir = null;            // evita que soltar el joystick envíe un segundo DETENER
-  joystick.soltar();
+  soltarMantenido();              // evita que soltar el joystick envíe un segundo DETENER
+  for (const j of Object.values(joysticks)) j.soltar();
   if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
   if (demo.activa) {
     try {
@@ -125,26 +138,28 @@ function pintarStop(fase) {
 }
 
 /* ------------------------------ Joystick ---------------------------- */
-function alCambiarDireccion(dir) {
+function alCambiarDireccion(mando, dir) {
+  if (mantener.mando && mantener.mando !== mando) return;    // el otro mando tiene el control
   clearInterval(mantener.timer);
   mantener.timer = null;
-  const cmd = dir ? catalogo.direccion(dir) : null;
-  if (modo === "joystick") log("Joystick", cmd ? Catalogo.etiqueta(cmd) : "neutral");
+  const cmd = dir ? catalogo.direccion(dir, mando) : null;
+  if (modo === "joystick") log(NOMBRE_MANDO[mando], cmd ? Catalogo.etiqueta(cmd) : "neutral");
 
   if (!cmd) {
     if (mantener.dir) {                 // volvió al centro, se soltó o se perdió el puntero
-      mantener.dir = null;
+      soltarMantenido();
       detenerMovimiento(O.joystick);
     }
     actualizarControles();
     return;
   }
+  mantener.mando = mando;
   mantener.dir = dir;
   vibrar(10);
   enviar(cmd.codigo, O.joystick);
   if (CONFIG.tiempos.mantenerMs > 0) {
     mantener.timer = setInterval(() => {
-      if (mantener.dir === dir && puedeMover()) comandos.enviar(cmd.codigo, O.joystick);
+      if (mantener.mando === mando && mantener.dir === dir && puedeMover()) comandos.enviar(cmd.codigo, O.joystick);
     }, CONFIG.tiempos.mantenerMs);
   }
   actualizarControles();
@@ -253,18 +268,18 @@ function explicarBloqueo() {
 function actualizarControles() {
   const listo = puedeMover();
   const tieneClave = !!claveStore.obtener();
-  const disponibles = new Set(["arriba", "abajo", "izquierda", "derecha"].filter((d) => catalogo.direccion(d)));
 
   // Si el control se bloquea con una dirección mantenida por teclado, se suelta y se detiene.
-  if (!listo && mantener.dir && !joystick.activo) {
-    clearInterval(mantener.timer);
-    mantener.timer = null;
-    mantener.dir = null;
+  if (!listo && mantener.dir && !algunJoystickActivo()) {
+    soltarMantenido();
     if (!demo.activa && tieneClave) detenerMovimiento(O.joystick);
   }
 
   botonera.setHabilitado(listo, { bloquearSecundarios: !!mantener.dir });
-  joystick.configurar(listo, disponibles);
+  for (const [mando, j] of Object.entries(joysticks)) {
+    j.pausado = !!mantener.mando && mantener.mando !== mando;     // un joystick sostenido a la vez
+    j.configurar(listo, new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, mando))));
+  }
   $("btnMic").disabled = !tieneClave || !vozSoportada();   // «alto» por voz funciona también durante una DEMO
   $("txtOrden").disabled = !tieneClave;
   $("btnOrden").disabled = !tieneClave;
@@ -283,6 +298,8 @@ function actualizarControles() {
 }
 
 /* ---------------------------- Modos --------------------------------- */
+const botonesModo = [...document.querySelectorAll(".mando-modos [data-modo]")];
+
 function leerModo() {
   try { const m = localStorage.getItem("vehiculoIot.modo"); return MODOS.includes(m) ? m : "pulso"; } catch { return "pulso"; }
 }
@@ -290,67 +307,59 @@ function leerModo() {
 function setModo(nuevo) {
   if (!MODOS.includes(nuevo)) nuevo = "pulso";
   if (modo === "voz" && nuevo !== "voz") voz.detener();
-  joystick.soltar();
+  for (const j of Object.values(joysticks)) j.soltar();
   modo = nuevo;
   try { localStorage.setItem("vehiculoIot.modo", nuevo); } catch { /* */ }
-  for (const b of document.querySelectorAll("[data-modo]")) {
-    const on = b.dataset.modo === nuevo;
-    b.setAttribute("aria-selected", String(on));
-    b.tabIndex = on ? 0 : -1;
-  }
-  $("vistaPulso").hidden = nuevo !== "pulso";
-  $("vistaJoystick").hidden = nuevo !== "joystick";
-  $("vistaVoz").hidden = nuevo !== "voz";
+  mandoEl.dataset.modo = nuevo;
+  for (const b of botonesModo) b.setAttribute("aria-pressed", String(b.dataset.modo === nuevo));
+  for (const n of mandoEl.querySelectorAll("[data-vista]")) n.hidden = !n.dataset.vista.split(" ").includes(nuevo);
   $("ayudaModo").textContent = AYUDA[nuevo];
   $("lineaEstado").textContent = AYUDA[nuevo];
   actualizarControles();
 }
 
-const tabs = [...document.querySelectorAll("[data-modo]")];
-tabs.forEach((b, i) => {
-  b.addEventListener("click", () => setModo(b.dataset.modo));
-  b.addEventListener("keydown", (e) => {
-    const paso = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (!paso) return;
-    e.preventDefault();
-    const sig = tabs[(i + paso + tabs.length) % tabs.length];
-    sig.focus();
-    setModo(sig.dataset.modo);
-  });
-});
+for (const b of botonesModo) b.addEventListener("click", () => setModo(b.dataset.modo));
 
 /* ------------------------- Teclado y seguridad ---------------------- */
-const TECLAS_DIR = { arrowup: "arriba", w: "arriba", arrowdown: "abajo", s: "abajo", arrowleft: "izquierda", a: "izquierda", arrowright: "derecha", d: "derecha" };
+/** Flechas y WASD: conducción. IJKL: brazo (I/K) y pala (J/L). */
+const TECLAS_DIR = {
+  arrowup: ["conduccion", "arriba"], w: ["conduccion", "arriba"],
+  arrowdown: ["conduccion", "abajo"], s: ["conduccion", "abajo"],
+  arrowleft: ["conduccion", "izquierda"], a: ["conduccion", "izquierda"],
+  arrowright: ["conduccion", "derecha"], d: ["conduccion", "derecha"],
+  i: ["brazo", "arriba"], k: ["brazo", "abajo"], j: ["brazo", "izquierda"], l: ["brazo", "derecha"],
+};
 const presionadas = new Set();
 
 document.addEventListener("keydown", (e) => {
   if (document.querySelector(".modal.show")) return;
   const t = e.target;
-  if (t.closest?.("input,select,textarea,[role=tab],#joystick") || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (t.closest?.("input,select,textarea,.joy") || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === "escape" || (k === " " && !t.closest?.("button,a"))) {
     e.preventDefault();
     detenerTodo(O.teclado);
     return;
   }
-  const dir = TECLAS_DIR[k];
-  if (!dir || e.repeat || presionadas.has(k)) return;
+  if (!TECLAS_DIR[k] || e.repeat || presionadas.has(k)) return;
   if (t.closest?.("button,a") && k.startsWith("arrow")) return;
+  const [mando, dir] = TECLAS_DIR[k];
   e.preventDefault();
   presionadas.add(k);
-  const cmd = catalogo.direccion(dir);
+  const cmd = catalogo.direccion(dir, mando);
   if (!cmd) return;
-  if (modo === "joystick") { if (puedeMover()) alCambiarDireccion(dir); }
+  if (modo === "joystick") { if (puedeMover()) alCambiarDireccion(mando, dir); }
   else enviar(cmd.codigo, O.teclado);
 });
 document.addEventListener("keyup", (e) => {
   const k = e.key.toLowerCase();
   if (!presionadas.delete(k)) return;
-  if (modo === "joystick" && mantener.dir === TECLAS_DIR[k]) alCambiarDireccion(null);
+  const [mando, dir] = TECLAS_DIR[k];
+  if (modo === "joystick" && mantener.mando === mando && mantener.dir === dir) alCambiarDireccion(mando, null);
 });
 window.addEventListener("blur", () => {
   presionadas.clear();
-  if (mantener.dir && !joystick.activo) alCambiarDireccion(null);
+  if (mantener.dir && !algunJoystickActivo()) alCambiarDireccion(mantener.mando, null);
 });
 
 const btnStop = $("btnStop");
