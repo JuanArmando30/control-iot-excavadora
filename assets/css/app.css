@@ -50,6 +50,11 @@ body {
   box-shadow: none !important;
 }
 
+.container-xl {
+  padding-left: max(.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(.75rem, env(safe-area-inset-right, 0px));
+}
+
 .saltar {
   position: absolute; left: 8px; top: -60px; z-index: 100;
   padding: 8px 14px; border-radius: 10px; background: var(--acento); color: #00121b; font-weight: 700;
@@ -301,18 +306,19 @@ body {
 .joy::after { content: ""; position: absolute; inset: 37%; border-radius: 50%; border: 1px solid #3a55ad66; }
 .joy.deshabilitado { opacity: .4; filter: saturate(.4); cursor: not-allowed; }
 .joy.arrastrando { cursor: grabbing; border-color: var(--acento); }
-.joy-mk { position: absolute; display: grid; place-items: center; width: 30px; height: 30px; color: #6d85d0; transition: color .12s; }
+.joy-mk { pointer-events: none; position: absolute; display: grid; place-items: center; width: 30px; height: 30px; color: #6d85d0; transition: color .12s; }
 .joy-mk .ico { width: 24px; height: 24px; stroke-width: 2.6; }
 .joy-mk.on { color: var(--acento); filter: drop-shadow(0 0 7px var(--acento)); }
 .joy-mk.no-disp { opacity: .25; }
 .mk-arriba { top: 6%; left: calc(50% - 15px); } .mk-abajo { bottom: 6%; left: calc(50% - 15px); }
 .mk-izquierda { left: 6%; top: calc(50% - 15px); } .mk-derecha { right: 6%; top: calc(50% - 15px); }
 .joy-perilla {
-  position: absolute; left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; z-index: 1;
+  position: absolute; left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; z-index: 1; pointer-events: none;
   background: radial-gradient(circle at 35% 28%, #9be8ff, #2f78ff 52%, #1b2f93);
   box-shadow: 0 8px 20px #000b, 0 0 26px #46d3ff77; transition: transform .16s cubic-bezier(.2, .9, .3, 1.3); will-change: transform;
 }
 .joy.arrastrando .joy-perilla { transition: none; }
+.joy.arrastrando .joy-mk { transition: none; }
 
 /* ---------------------------------- Voz --------------------------------- */
 .voz { display: grid; gap: 8px; width: 100%; max-width: 560px; align-content: center; }
@@ -493,7 +499,7 @@ body {
 @media (orientation: landscape) and (max-height: 520px) {
   :root { --stop-alto: 44px; }
   .barra-sup { position: static; }
-  .barra-sup-in { grid-template-columns: auto 1fr auto; grid-template-areas: "marca nav clave"; padding-block: 3px; }
+  .barra-sup-in { grid-template-columns: auto 1fr auto; grid-template-areas: "marca nav clave"; padding-block: 6px; }
   .marca-txt small { display: none; }
   .marca img { width: 28px; height: 28px; }
   .nav-sec { width: min(420px, 100%); justify-self: center; padding: 3px; }
@@ -501,15 +507,17 @@ body {
   .btn-clave { min-height: 32px; }
   .nav-sec .lbl-largo { display: none; }
   .nav-sec .lbl-corto { display: inline; }
-  .pagina-control .pie { padding: 2px 0; font-size: .68rem; }
+  .pagina-control .pie { padding: 5px 0 calc(5px + var(--sab)); font-size: .68rem; }
 
   .pagina-control .marca-txt { display: none; }      /* solo el logo: el espacio es para menú e indicadores */
   .menu { padding: 3px; width: min(560px, 100%); justify-self: center; }
   .menu .nav-sec { padding: 0; width: auto; }
   .estado-btn { min-height: 30px; }
 
-  .contenido-control { padding-top: 5px; padding-bottom: 4px; }
-  .mando { --g: 6px; padding: 6px; border-radius: 18px; }
+  .contenido-control { padding-top: 10px; padding-bottom: 10px; }
+  .mando { --g: 6px; padding: 8px; border-radius: 18px; }
+  .mando-modos button span { display: none; }      /* solo iconos en cualquier ancho horizontal bajo */
+  .mando-modos button { padding-inline: 6px; }
   .pad { padding: 3px; border-radius: 14px; }
   .pad-titulo, .linea-estado { display: none; }     /* el título sigue asociado al grupo con aria-labelledby */
   .mando .aviso-linea { padding: 3px 10px; font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

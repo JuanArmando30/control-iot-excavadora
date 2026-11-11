@@ -1,6 +1,8 @@
 /**
  * Joystick circular con Pointer Events (mouse, táctil y lápiz).
  * - Zona neutral con histéresis (entrar cuesta más que salir).
+ * - La perilla sigue al dedo en cada pointermove, sin esperar al siguiente
+ *   fotograma; la geometría se mide una vez al tocar (no en cada movimiento).
  * - Solo notifica CAMBIOS de dirección (nunca por píxel o fotograma).
  * - Al soltar, cancelar o perder el puntero vuelve al centro y notifica null.
  * - Teclado: con el joystick enfocado, las flechas lo mueven y al soltar vuelve.
@@ -9,7 +11,10 @@
  */
 
 const ANGULO = { derecha: 0, abajo: 90, izquierda: 180, arriba: -90 };   // eje Y hacia abajo
-const HISTERESIS = 12;
+const HISTERESIS = 8;           // grados extra para conservar la dirección actual (evita parpadeo en la diagonal)
+const RECORRIDO = 0.6;          // recorrido máximo de la perilla, en fracción del radio
+const ZONA_ENTRAR = 0.26;       // zona neutral para empezar a mover (fracción del recorrido)
+const ZONA_SALIR = 0.16;        // zona neutral para volver a neutral (menor: histéresis)
 const TECLAS = { ArrowUp: "arriba", ArrowDown: "abajo", ArrowLeft: "izquierda", ArrowRight: "derecha" };
 
 const difAngulo = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
@@ -27,8 +32,7 @@ export class Joystick {
     this.habilitado = false;
     this.pausado = false;
     this.disponibles = new Set();
-    this.frame = 0;
-    this.ultimoPunto = null;
+    this.geo = null;            // {cx, cy, recorrido} medido al tocar
     this.teclaActiva = null;
 
     base.addEventListener("pointerdown", (e) => this._down(e));
@@ -37,6 +41,7 @@ export class Joystick {
       base.addEventListener(t, (e) => { if (e.pointerId === this.pid) this.soltar(); });
     }
     base.addEventListener("contextmenu", (e) => e.preventDefault());
+    window.addEventListener("resize", () => { if (this.geo) this._medir(); });
     base.addEventListener("keydown", (e) => this._tecla(e, true));
     base.addEventListener("keyup", (e) => this._tecla(e, false));
     base.addEventListener("blur", () => { if (this.teclaActiva) this.soltar(); });
@@ -63,7 +68,7 @@ export class Joystick {
     if (this.pid !== null) { try { this.base.releasePointerCapture(this.pid); } catch { /* */ } }
     this.pid = null;
     this.teclaActiva = null;
-    cancelAnimationFrame(this.frame);
+    this.geo = null;
     this.base.classList.remove("arrastrando");
     this.perilla.style.transform = "";
     if (habia) this._cambiar(null);
@@ -76,32 +81,34 @@ export class Joystick {
     this.pid = e.pointerId;
     try { this.base.setPointerCapture(e.pointerId); } catch { /* */ }
     this.base.classList.add("arrastrando");
+    this._medir();
     this._procesar(e.clientX, e.clientY);
   }
 
   _move(e) {
     if (e.pointerId !== this.pid) return;
-    this.ultimoPunto = [e.clientX, e.clientY];
-    if (this.frame) return;                          // un cálculo por fotograma como máximo
-    this.frame = requestAnimationFrame(() => {
-      this.frame = 0;
-      if (this.pid !== null && this.ultimoPunto) this._procesar(...this.ultimoPunto);
-    });
+    e.preventDefault();
+    this._procesar(e.clientX, e.clientY);       // transform barato: la perilla va pegada al dedo
+  }
+
+  _medir() {
+    const r = this.base.getBoundingClientRect();
+    const radio = r.width / 2;
+    this.geo = { cx: r.left + radio, cy: r.top + radio, recorrido: radio * RECORRIDO };
   }
 
   _procesar(x, y) {
-    const r = this.base.getBoundingClientRect();
-    const radio = r.width / 2;
-    const recorrido = radio * 0.58;
-    let dx = x - (r.left + radio), dy = y - (r.top + radio);
+    if (!this.geo) this._medir();
+    const { cx, cy, recorrido } = this.geo;
+    let dx = x - cx, dy = y - cy;
     const dist = Math.hypot(dx, dy);
     if (dist > recorrido) { dx *= recorrido / dist; dy *= recorrido / dist; }
-    this.perilla.style.transform = `translate(${dx}px, ${dy}px)`;
+    this.perilla.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
     this._cambiar(this._direccion(dx, dy, recorrido));
   }
 
   _direccion(dx, dy, recorrido) {
-    const zona = recorrido * (this.dir ? 0.24 : 0.36);
+    const zona = recorrido * (this.dir ? ZONA_SALIR : ZONA_ENTRAR);
     if (Math.hypot(dx, dy) < zona) return null;
     const ang = Math.atan2(dy, dx) * 180 / Math.PI;
     if (this.dir && difAngulo(ang, ANGULO[this.dir]) <= 45 + HISTERESIS) return this.dir;
@@ -123,7 +130,7 @@ export class Joystick {
       if (!this.disponibles.has(dir)) return;
       this.teclaActiva = dir;
       const desp = { arriba: [0, -1], abajo: [0, 1], izquierda: [-1, 0], derecha: [1, 0] }[dir];
-      const r = this.base.getBoundingClientRect().width / 2 * 0.58;
+      const r = this.base.getBoundingClientRect().width / 2 * RECORRIDO;
       this.perilla.style.transform = `translate(${desp[0] * r}px, ${desp[1] * r}px)`;
       this._cambiar(dir);
     } else if (this.teclaActiva === dir) {
