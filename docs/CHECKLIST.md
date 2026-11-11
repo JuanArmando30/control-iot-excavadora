@@ -18,6 +18,7 @@
 - [x] Respuestas tardías de salud ignoradas (número de secuencia).
 - [x] WSS: reconexión exponencial con jitter, latido `ping/pong`, reconexión al volver la red o la pestaña, sin reconexión ante `4404`.
 - [x] Al perder WSS, soltar el puntero, ocultar la pestaña o perder el foco: se suelta el joystick y se envía DETENER.
+- [x] Giroscopio: DETENER al volver a neutral, al exceder ~65° (medido sin suavizar, sin órdenes intermedias), si el sensor calla 0.7 s, al girar la pantalla o perder el foco; DETENER lo pausa.
 - [x] DEMO: una a la vez, estado resincronizado con `GET …/demos/ejecucion` al cargar, al reconectar y tras un 409.
 
 ## Accesibilidad

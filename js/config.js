@@ -80,6 +80,7 @@ export const CONFIG = Object.freeze({
     voz: "WEB_VOZ",
     boton: "WEB_BOTON",
     teclado: "WEB_TECLADO",
+    giroscopio: "WEB_GIROSCOPIO",
   }),
 
   /**

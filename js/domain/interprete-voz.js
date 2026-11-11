@@ -117,7 +117,7 @@ function concepto(p) {
 export const FRASES_EJEMPLO = [
   "avanza", "regresa", "voltea a la izquierda", "dale a la derecha", "sube el brazo", "bájale a la pala",
   "gira la pala a la izquierda", "prende la luz", "toca el claxon", "enciende el motor",
-  "avanza y luego gira a la derecha", "avanza dos veces", "alto",
+  "avanza y luego gira a la derecha", "avanza dos veces", "inicia la demo", "alto",
 ];
 
 export function normalizar(t) {

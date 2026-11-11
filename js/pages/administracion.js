@@ -10,6 +10,7 @@ import { claveStore } from "../core/clave-store.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { abrirModal, campo, confirmar, leerFormulario } from "../ui/modales.js";
 import { $, el, icono, toast } from "../ui/dom.js";
+import { demoPreferida } from "../domain/demo-preferida.js";
 
 let vehiculos = [];
 let vehiculoSel = CONFIG.vehiculoId;
@@ -169,12 +170,25 @@ async function cargarDemos() {
     return;
   }
   if (!demos.some((d) => d.id_demo === demoSel)) demoSel = demos[0]?.id_demo ?? null;
+  const enControl = demoPreferida.resolver(vehiculoSel, demos.filter((d) => d.activo));
   if (!demos.length) filaVacia(tb, 4, "Este vehículo no tiene DEMO.");
   else tb.replaceChildren(...demos.map((d) => el("tr", { class: d.id_demo === demoSel ? "table-active" : "" }, [
-    el("td", { text: d.nombre }),
+    el("td", {}, [
+      el("span", { text: d.nombre }),
+      d.id_demo === enControl?.id_demo
+        ? el("span", { class: "badge badge-control ms-2", text: "En Control", attrs: { title: "El botón «Demo» de Control ejecuta esta DEMO" } })
+        : null,
+    ]),
     el("td", { class: "d-none d-md-table-cell", text: d.descripcion || "—" }),
     el("td", {}, [insignia(d.activo)]),
     el("td", { class: "acciones" }, [
+      d.activo && d.id_demo !== enControl?.id_demo
+        ? boton("Usar en Control", "i-play", "btn-outline-warning", () => {
+          demoPreferida.guardar(vehiculoSel, d.id_demo);
+          toast(`El botón «Demo» de Control ejecutará «${d.nombre}» (en este navegador).`, "ok");
+          cargarDemos();
+        }, `Usar ${d.nombre} en el botón Demo de Control`)
+        : null,
       boton("Pasos", "i-list", "btn-outline-light", () => { demoSel = d.id_demo; cargarDemos(); }, `Ver movimientos de ${d.nombre}`),
       boton("Editar", "i-edit", "btn-outline-info", () => formulario(`Editar DEMO ${d.nombre}`, camposDemo(d, true),
         async (x) => { await api.actualizarDemo(vehiculoSel, d.id_demo, x); toast("DEMO actualizada.", "ok"); await cargarDemos(); }),

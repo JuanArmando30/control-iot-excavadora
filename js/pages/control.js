@@ -13,21 +13,24 @@ import { WS } from "../core/ws-client.js";
 import { Catalogo, DIRECCIONES } from "../domain/catalogo.js";
 import { ComandoService, FASE } from "../domain/comando-service.js";
 import { DemoService } from "../domain/demo-service.js";
+import { demoPreferida } from "../domain/demo-preferida.js";
 import { interpretar, FRASES_EJEMPLO } from "../domain/interprete-voz.js";
 import { Botonera } from "../ui/botonera.js";
 import { Joystick } from "../ui/joystick.js";
 import { ControlVoz, vozSoportada } from "../ui/voz.js";
+import { Giroscopio } from "../ui/giroscopio.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, toast, vibrar } from "../ui/dom.js";
 import { iniciarConectividad, pintarVehiculo } from "./comun.js";
 
 const V = CONFIG.vehiculoId;
 const O = CONFIG.origen;
-const MODOS = ["pulso", "joystick", "voz"];
+const MODOS = ["pulso", "joystick", "voz", "giro"];
 const AYUDA = {
   pulso: "Pulso: cada toque envía una orden. Izquierda: conducción · derecha: brazo y pala.",
   joystick: "Joystick: arrastra una perilla (una a la vez); al soltar vuelve al centro y se envía DETENER.",
   voz: "Voz: habla con naturalidad; puedes encadenar órdenes con «y luego». Di «alto» para detener al instante.",
+  giro: "Giroscopio: inclina el teléfono para conducir; el brazo, la pala y los accesorios van con botones (con el teléfono nivelado).",
 };
 const NOMBRE_MANDO = { conduccion: "Conducción", brazo: "Brazo y pala" };
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -36,8 +39,8 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 let catalogo = new Catalogo();
 let wsAbierto = false;
 let modo = leerModo();
-/** Dirección sostenida en modo Joystick. Solo un mando a la vez (una orden en vuelo). */
-const mantener = { mando: null, dir: null, timer: null };
+/** Dirección sostenida (Joystick o Giroscopio). Solo un mando a la vez (una orden en vuelo). */
+const mantener = { mando: null, dir: null, timer: null, origen: O.joystick };
 
 const demo = new DemoService({ api, vehiculoId: V });
 const comandos = new ComandoService({
@@ -54,7 +57,7 @@ const log = (etq, txt) => {
 /* ------------------------------ Vista ------------------------------- */
 const mandoEl = $("mando");
 const botonera = new Botonera({
-  crucetas: { conduccion: $("cruceta"), brazo: $("crucetaBrazo") },
+  crucetas: { conduccion: $("cruceta"), brazo: $("crucetaBrazo"), brazoGiro: $("botonesGiro") },
   secundarios: $("secundarios"),
   onPulsar: (codigo, origenUi) => enviar(codigo, origenUi === "cruceta" ? O.pulso : O.boton),
 });
@@ -63,6 +66,24 @@ const joysticks = {
   brazo: new Joystick($("joystickBrazo"), $("joyPerillaBrazo"), { onDireccion: (d) => alCambiarDireccion("brazo", d) }),
 };
 const algunJoystickActivo = () => Object.values(joysticks).some((j) => j.activo);
+
+const giroscopio = new Giroscopio($("nivel"), {
+  onDireccion: (d) => alCambiarDireccion("conduccion", d, O.giroscopio),
+  onEstado: (txt, tipo = "") => { const p = $("giroEstado"); p.textContent = txt; p.dataset.tipo = tipo; },
+  onCambio: (on) => {
+    const b = $("btnGiro");
+    b.setAttribute("aria-pressed", String(on));
+    b.querySelector("use").setAttribute("href", `assets/icons/sprite.svg#${on ? "i-pause" : "i-play"}`);
+    b.querySelector("span").textContent = on ? "Pausar" : "Activar";
+    $("btnCentrar").disabled = !on;
+  },
+});
+$("btnGiro").addEventListener("click", () => {
+  if (giroscopio.activo) { giroscopio.pausar(); return; }
+  if (!puedeMover()) { explicarBloqueo(); return; }
+  giroscopio.activar();               // primera llamada dentro del toque: iOS exige gesto del usuario
+});
+$("btnCentrar").addEventListener("click", () => giroscopio.centrar());
 
 function soltarMantenido() {
   clearInterval(mantener.timer);
@@ -98,6 +119,7 @@ async function detenerTodo(origen = O.boton) {
   soltarMantenido();              // evita que soltar el joystick envíe un segundo DETENER
   cancelarSecuenciaVoz("cancelada con DETENER");
   for (const j of Object.values(joysticks)) j.soltar();
+  giroscopio.pausar("Pausado por DETENER. Toca «Activar» para seguir.");
   if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
   if (demo.activa) {
     try {
@@ -140,28 +162,30 @@ function pintarStop(fase) {
 }
 
 /* ------------------------------ Joystick ---------------------------- */
-function alCambiarDireccion(mando, dir) {
+function alCambiarDireccion(mando, dir, origen = O.joystick) {
   if (mantener.mando && mantener.mando !== mando) return;    // el otro mando tiene el control
   clearInterval(mantener.timer);
   mantener.timer = null;
   const cmd = dir ? catalogo.direccion(dir, mando) : null;
-  if (modo === "joystick") log(NOMBRE_MANDO[mando], cmd ? Catalogo.etiqueta(cmd) : "neutral");
+  if (modo === "joystick" || modo === "giro") log(NOMBRE_MANDO[mando], cmd ? Catalogo.etiqueta(cmd) : "neutral");
 
   if (!cmd) {
-    if (mantener.dir) {                 // volvió al centro, se soltó o se perdió el puntero
+    if (mantener.dir) {                 // volvió al centro, se soltó, se niveló o se perdió el sensor
+      const o = mantener.origen;
       soltarMantenido();
-      detenerMovimiento(O.joystick);
+      detenerMovimiento(o);
     }
     actualizarControles();
     return;
   }
   mantener.mando = mando;
   mantener.dir = dir;
+  mantener.origen = origen;
   vibrar(10);
-  enviar(cmd.codigo, O.joystick);
+  enviar(cmd.codigo, origen);
   if (CONFIG.tiempos.mantenerMs > 0) {
     mantener.timer = setInterval(() => {
-      if (mantener.mando === mando && mantener.dir === dir && puedeMover()) comandos.enviar(cmd.codigo, O.joystick);
+      if (mantener.mando === mando && mantener.dir === dir && puedeMover()) comandos.enviar(cmd.codigo, origen);
     }, CONFIG.tiempos.mantenerMs);
   }
   actualizarControles();
@@ -213,7 +237,15 @@ async function ejecutarFrase(entrada) {
 
   if (!i) { pintarVoz(`No entendí «${texto}». Prueba: «avanza», «sube el brazo», «prende la luz».`, "no"); return; }
   if (i.tipo === "stop" || i.tipo === "cancelar") { pintarVoz("DETENER", "ok"); await detenerTodo(O.voz); return; }
-  if (i.tipo === "demo") { pintarVoz("Las DEMO se inician desde Monitoreo.", "no"); return; }
+  if (i.tipo === "demo") {
+    const d = demoElegida();
+    if (!d) { pintarVoz("No hay DEMO activas: créalas en Administración.", "no"); return; }
+    if (demo.activa) { pintarVoz("Ya hay una DEMO en ejecución. Di «alto» para cancelarla.", "no"); return; }
+    if (!puedeMover()) { pintarVoz("Control bloqueado: " + motivoBloqueo(), "no"); return; }
+    pintarVoz(`Iniciando DEMO «${d.nombre}»…`, "ok");
+    await iniciarDemoElegida(d);
+    return;
+  }
 
   let pasos = i.pasos || [];
   if (i.tipo === "repetir") {
@@ -276,7 +308,83 @@ if (!vozSoportada()) {
 }
 
 /* ------------------------------- DEMO ------------------------------- */
+/* Botón «Demo» (en la fila central, visible en todos los modos). Ejecuta la DEMO
+   elegida en Administración; primer toque = «¿Iniciar?», segundo toque = inicia.
+   Mientras corre muestra el avance y tocarlo la cancela (igual que DETENER). */
+const btnDemo = $("btnDemo");
+const CONFIRMAR_MS = 3000;
+let confirmarDemoHasta = 0;
+
+const demoElegida = () => demoPreferida.resolver(V, demo.demos);
+
+async function cargarDemos() {
+  try { await demo.cargar(); } catch (e) { log("Error", "DEMO: " + e.message); }
+  pintarBotonDemo();
+}
+
+function pintarBotonDemo() {
+  const e = demo.estado;
+  const d = demoElegida();
+  const tieneClave = !!claveStore.obtener();
+  const confirmando = !e.activa && Date.now() < confirmarDemoHasta;
+  const txt = btnDemo.querySelector(".cbtn-txt");
+  btnDemo.classList.toggle("is-demo", e.activa);
+  btnDemo.classList.toggle("is-confirmar", confirmando);
+  btnDemo.style.setProperty("--avance", e.activa && e.total ? `${Math.round((e.orden / e.total) * 100)}%` : "0%");
+  btnDemo.querySelector("use").setAttribute("href", `assets/icons/sprite.svg#${e.activa ? "i-stop" : "i-play"}`);
+  let titulo;
+  if (e.activa) {
+    txt.textContent = e.total ? `Demo ${e.orden}/${e.total}` : "Demo…";
+    titulo = `DEMO «${e.nombre || "en curso"}» en ejecución. Toca para cancelarla.`;
+  } else if (confirmando) {
+    txt.textContent = "¿Iniciar?";
+    titulo = `Toca otra vez para iniciar «${d?.nombre}».`;
+  } else {
+    txt.textContent = "Demo";
+    titulo = d ? `Iniciar DEMO «${d.nombre}» (se elige en Administración).` : "No hay DEMO activas: créalas en Administración.";
+  }
+  btnDemo.title = titulo;
+  btnDemo.setAttribute("aria-label", titulo);
+  btnDemo.disabled = demo.solicitando
+    || (e.activa ? !tieneClave : !(d && tieneClave && wsAbierto && catalogo.cargado && !mantener.dir));
+}
+
+async function iniciarDemoElegida(d) {
+  // Nada más debe estar moviendo el carrito cuando arranca la DEMO.
+  for (const j of Object.values(joysticks)) j.soltar();
+  giroscopio.pausar("Pausado: DEMO en ejecución.");
+  cancelarSecuenciaVoz("cancelada: inicia una DEMO");
+  try {
+    const r = await demo.iniciar(d.id_demo);
+    log("DEMO", `«${r.nombre}» aceptada · ${r.total_movimientos} movimientos`);
+    toast(`DEMO «${r.nombre}» en ejecución. DETENER la cancela.`, "ok");
+  } catch (e) {
+    log("Error", "DEMO: " + e.message);
+    if (e.status === 401) { claveStore.olvidar(); abrirDialogoClave({ motivo: e.message }); }
+    else toast("DEMO: " + e.message, "error");
+  }
+  pintarBotonDemo();
+}
+
+btnDemo.addEventListener("click", async () => {
+  if (demo.activa) { await detenerTodo(O.boton); return; }
+  const d = demoElegida();
+  if (!d) { toast("No hay DEMO activas: créalas en Administración.", "error"); return; }
+  if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
+  if (Date.now() >= confirmarDemoHasta) {                  // primer toque: pide confirmación
+    confirmarDemoHasta = Date.now() + CONFIRMAR_MS;
+    vibrar(15);
+    pintarBotonDemo();
+    setTimeout(pintarBotonDemo, CONFIRMAR_MS + 50);
+    return;
+  }
+  confirmarDemoHasta = 0;
+  await iniciarDemoElegida(d);
+});
+demoPreferida.alCambiar(V, pintarBotonDemo);
+
 demo.addEventListener("cambio", (e) => {
+  pintarBotonDemo();
   if (e.detail.evento === "demo_iniciada") log("DEMO", `«${e.detail.nombre}» en ejecución`);
   if (e.detail.fin) log("DEMO", e.detail.fin);
   actualizarControles();
@@ -325,15 +433,21 @@ function actualizarControles() {
 
   // Si el control se bloquea con una dirección mantenida por teclado, se suelta y se detiene.
   if (!listo && mantener.dir && !algunJoystickActivo()) {
+    const o = mantener.origen;
     soltarMantenido();
-    if (!demo.activa && tieneClave) detenerMovimiento(O.joystick);
+    if (!demo.activa && tieneClave) detenerMovimiento(o);
   }
 
-  botonera.setHabilitado(listo, { bloquearSecundarios: !!mantener.dir });
+  // Con una dirección sostenida (joystick o teléfono inclinado) no se aceptan otras órdenes: una a la vez.
+  botonera.setHabilitado(listo, { bloquearSecundarios: !!mantener.dir, bloquearBrazo: !!mantener.dir });
+  giroscopio.configurar(listo, new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, "conduccion"))));
+  if (!listo && giroscopio.activo) giroscopio.pausar("Pausado: " + motivoBloqueo());
+  $("btnGiro").disabled = !listo && !giroscopio.activo;
   for (const [mando, j] of Object.entries(joysticks)) {
     j.pausado = !!mantener.mando && mantener.mando !== mando;     // un joystick sostenido a la vez
     j.configurar(listo, new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, mando))));
   }
+  pintarBotonDemo();
   $("btnMic").disabled = !tieneClave || !vozSoportada();   // «alto» por voz funciona también durante una DEMO
   $("txtOrden").disabled = !tieneClave;
   $("btnOrden").disabled = !tieneClave;
@@ -344,7 +458,7 @@ function actualizarControles() {
   let texto = "", tipo = "info";
   if (!tieneClave) texto = "Falta la clave de operador: pulsa «Sin clave».";
   else if (!catalogo.cargado) { texto = "No se pudo cargar el catálogo de comandos."; tipo = "error"; }
-  else if (est.activa) texto = "DEMO en ejecución: mando bloqueado. DETENER la cancela.";
+  else if (est.activa) texto = `DEMO «${est.nombre || "en curso"}»${est.total ? ` (${est.orden}/${est.total})` : ""}: mando bloqueado. DETENER la cancela.`;
   else if (!wsAbierto) { texto = "Sin sesión WSS: mando bloqueado hasta reconectar. DETENER sigue activo."; tipo = "error"; }
   aviso.textContent = texto;
   aviso.className = `aviso aviso-linea aviso-${tipo}`;
@@ -361,6 +475,7 @@ function leerModo() {
 function setModo(nuevo) {
   if (!MODOS.includes(nuevo)) nuevo = "pulso";
   if (modo === "voz" && nuevo !== "voz") { voz.detener(); cancelarSecuenciaVoz("cancelada al cambiar de modo"); }
+  if (nuevo !== "giro") giroscopio.pausar();
   for (const j of Object.values(joysticks)) j.soltar();
   modo = nuevo;
   try { localStorage.setItem("vehiculoIot.modo", nuevo); } catch { /* */ }
@@ -448,7 +563,7 @@ async function sincronizarDemo() {
   setModo(modo);
   botonera.render(catalogo);
   await inicializarClave();
-  await Promise.all([pintarVehiculo(), cargarCatalogo(), sincronizarDemo()]);
+  await Promise.all([pintarVehiculo(), cargarCatalogo(), sincronizarDemo(), cargarDemos()]);
   ws.conectar();
   if (!claveStore.obtener()) abrirDialogoClave({ motivo: "Para mover el vehículo necesitas la clave de operador." });
 })();

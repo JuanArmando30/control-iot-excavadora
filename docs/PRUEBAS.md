@@ -38,6 +38,24 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | D4 | Di «alto» (o «detente», «frena», «quieto») en modo Voz | DETENER sin esperar el resultado final del reconocimiento; también si «alto» aparece solo en una de las alternativas del reconocedor |
 | D5 | DETENER durante una DEMO | Llama a `POST …/demos/cancelar`; llega `demo_cancelada` con `detenido_con: "DETENER"` |
 
+## G · Giroscopio (modo Giro, en un teléfono real por HTTPS)
+
+| # | Pasos | Resultado esperado |
+|---|---|---|
+| G0 | Cambia entre Pulso, Joystick, Voz y Giro | Giro tiene paneles propios (indicador de teléfono + botonera 2×2 de brazo y pala); no aparecen en los otros modos, y los otros no aparecen en Giro |
+| G1 | Toca «Activar» (en iPhone acepta el permiso de movimiento) y sostén el teléfono cómodo | El teléfono dibujado queda recto y la burbuja al centro: esa postura es la neutral. No se envía nada |
+| G2 | Aleja el borde superior ~15–20° | AVANZAR (origen `WEB_GIROSCOPIO`), flecha superior iluminada; mientras sigas inclinado, un reenvío cada 2.4 s |
+| G3 | Acerca el borde superior / inclina a la derecha / a la izquierda | RETROCEDER / GIRAR_DERECHA / GIRAR_IZQUIERDA (un solo `POST` por cambio) |
+| G4 | Vuelve a la postura neutral (o inclina menos de ~7°) | DETENER |
+| G5 | Repite G2–G4 con el teléfono en horizontal | Mismo comportamiento: los ejes siguen a la pantalla, no al teléfono |
+| G6 | Inclinado: intenta usar Subir, Pala o Luz | Botones deshabilitados (una orden a la vez); al nivelar se habilitan |
+| G7 | Nivelado: usa Subir / Bajar / Pala izq. / Pala der. / Luz / Sonido / On-Off | Envían su comando como en modo Pulso |
+| G8 | Voltea el teléfono boca abajo o inclínalo más de ~65° | DETENER inmediato, sin órdenes intermedias; no conduce hasta volver a la postura neutral |
+| G9 | Inclinado, toca DETENER | DETENER y el giroscopio queda en pausa (hay que tocar «Activar» de nuevo) |
+| G10 | Inclinado, cambia de pestaña / bloquea la pantalla / gira la pantalla | DETENER; al girar la pantalla se toma una nueva postura neutral |
+| G11 | «Centrar» con el teléfono en otra postura | La nueva postura pasa a ser la neutral |
+| G12 | En una PC sin sensor, toca «Activar» | «No llegan datos del sensor…»; no se envía nada |
+
 ## V · Voz (modo Voz; también sirve escribir la frase en «…o escribe una orden»)
 
 | # | Frase | Resultado esperado |
@@ -58,6 +76,20 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | V14 | «hola qué tal» | No envía nada y sugiere frases de ejemplo |
 
 ## M · DEMO
+
+**Desde Control (botón «Demo» de la fila central, en los 4 modos):**
+
+| # | Pasos | Resultado esperado |
+|---|---|---|
+| MC1 | En Administración → DEMO, toca «Usar en Control» en una DEMO activa | La insignia «En Control» pasa a esa DEMO; en Control el botón dice «Iniciar DEMO «…»» al pasar el cursor |
+| MC2 | En Control toca «Demo» una vez y espera 3 s | Muestra «¿Iniciar?» y vuelve a «Demo» sin enviar nada |
+| MC3 | Toca «Demo» dos veces seguidas | `POST …/demos/{id}/iniciar` de la DEMO elegida; el botón muestra «Demo n/N» con barra de avance; aviso «DEMO «…» (n/N): mando bloqueado»; el resto del mando queda deshabilitado |
+| MC4 | Durante la DEMO toca «Demo» o DETENER | `POST …/demos/cancelar`; vuelve a «Demo» |
+| MC5 | Di (o escribe) «inicia la demo» en modo Voz | Inicia la DEMO elegida |
+| MC6 | Sin DEMO activas, sin clave o sin WSS | Botón deshabilitado; el texto emergente explica por qué |
+| MC7 | La DEMO elegida se desactiva o elimina | Control usa la primera DEMO activa |
+
+**Desde Monitoreo:**
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
@@ -87,6 +119,8 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | R2 | Teléfono horizontal | Como un control real: conducción a la izquierda, centro con modos, Luz · Sonido · On/Off y DETENER, brazo y pala a la derecha; indicadores dentro del menú; sin scroll |
 | R3 | Tableta y escritorio | Misma distribución mando · centro · mando; indicadores en una fila |
 | R4 | Teclado solo | Foco visible en todo; modos con Tab + Enter; flechas/WASD conducen, IJKL mueven brazo y pala |
+| R5 | Modo Giro en vertical y horizontal | Indicador del teléfono con Activar/Centrar a la izquierda, botonera 2×2 de brazo y pala a la derecha, accesorios y DETENER al centro; sin scroll |
+| R6 | Pantalla de carga | Al entrar o recargar: animación completa ~3.5 s. Al navegar entre Control, Monitoreo y Administración: versión corta ~1.8 s con «Abriendo <sección>». Siempre desaparece sola. Con «reducir movimiento» activado en el sistema no se muestra |
 
 ## W · Verificación independiente del WebSocket
 

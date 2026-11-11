@@ -18,7 +18,7 @@ const DURACION_FLASH = 1300;
 
 export class Botonera {
   /**
-   * @param {{crucetas: {conduccion: HTMLElement, brazo: HTMLElement}, secundarios: HTMLElement,
+   * @param {{crucetas: Object<string, HTMLElement>, secundarios: HTMLElement,
    *          onPulsar: (codigo:number, origenUi:"cruceta"|"boton") => void}} op
    */
   constructor({ crucetas, secundarios, onPulsar }) {
@@ -27,21 +27,25 @@ export class Botonera {
     this.timers = new Map();
     this.habilitado = false;
     this.bloqueoSecundarios = false;
+    this.bloqueoBrazo = false;
   }
 
   render(catalogo) {
     this.botones.clear();
 
     // ---- Crucetas: una por mando ----
-    for (const [mando, contenedor] of Object.entries(this.crucetas)) {
+    for (const [clave, contenedor] of Object.entries(this.crucetas)) {
+      if (!contenedor) continue;
+      const mando = contenedor.dataset.mando || clave;        // p. ej. botonesGiro → mando "brazo"
       const piezas = DIRECCIONES.map((dir) => this._boton(catalogo.direccion(dir, mando), {
         icono: mando === "conduccion" ? ICONO_DIR[dir] : (CONFIG.iconos[MANDOS[mando][dir]] || ICONO_DIR[dir]),
         clase: `cbtn dir-${dir}`,
         origen: "cruceta",
         sinCatalogo: `Sin comando para ${SIN_COMANDO[mando][dir]}`,
       }));
-      const eje = el("div", { class: "cruceta-eje", attrs: { "aria-hidden": "true" } }, [icono(ICONO_EJE[mando])]);
-      contenedor.replaceChildren(...piezas, eje);
+      const compacta = contenedor.classList.contains("botones-brazo");   // 2×2, sin centro
+      const eje = compacta ? null : el("div", { class: "cruceta-eje", attrs: { "aria-hidden": "true" } }, [icono(ICONO_EJE[mando])]);
+      contenedor.replaceChildren(...piezas, ...(eje ? [eje] : []));
     }
 
     // ---- Centro: luz, sonido, encendido y cualquier otro comando activo ----
@@ -93,10 +97,11 @@ export class Botonera {
     return b;
   }
 
-  /** @param {boolean} habilitado @param {{bloquearSecundarios?: boolean}} op */
-  setHabilitado(habilitado, { bloquearSecundarios = false } = {}) {
+  /** @param {boolean} habilitado @param {{bloquearSecundarios?: boolean, bloquearBrazo?: boolean}} op */
+  setHabilitado(habilitado, { bloquearSecundarios = false, bloquearBrazo = false } = {}) {
     this.habilitado = habilitado;
     this.bloqueoSecundarios = bloquearSecundarios;
+    this.bloqueoBrazo = bloquearBrazo;
     this._aplicarHabilitado();
   }
 
@@ -104,7 +109,9 @@ export class Botonera {
     for (const [, lista] of this.botones) {
       for (const b of lista) {
         const esSec = b.classList.contains("cbtn-sec");
-        b.disabled = !this.habilitado || (esSec && this.bloqueoSecundarios);
+        const esBrazo = Object.values(this.crucetas).some((c) => c && (c.dataset.mando || "") === "brazo" && c.contains(b))
+          || !!this.crucetas.brazo?.contains(b);
+        b.disabled = !this.habilitado || (esSec && this.bloqueoSecundarios) || (esBrazo && this.bloqueoBrazo);
         if (b.disabled) b.classList.remove("is-pressed");
       }
     }
