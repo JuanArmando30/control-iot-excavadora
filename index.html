@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'; connect-src https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Control remoto del vehículo IoT: pulso, joystick, voz, acciones del catálogo y DETENER.">
+  <meta name="description" content="Control remoto de la excavadora IoT: mando de conducción, mando de brazo y pala, luz, sonido, encendido, voz y DETENER.">
   <meta name="theme-color" content="#060d24">
   <title>Control · Excavadora IoT</title>
-  <link rel="icon" href="assets/icons/favicon.ico" sizes="32x32">
-  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/icons/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="assets/icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="assets/site.webmanifest">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -25,14 +26,17 @@
   <header class="barra-sup">
     <div class="container-xl barra-sup-in">
       <a class="marca" href="index.html">
-        <img src="assets/icons/favicon.svg" alt="" width="40" height="40">
+        <img src="assets/icons/icon-192.png" alt="" width="40" height="40">
         <span class="marca-txt"><strong>Excavadora IoT</strong><small id="vehiculoNombre">Vehículo #1</small></span>
       </a>
+      <div class="menu">
       <nav class="nav-sec" aria-label="Secciones">
         <a href="index.html" aria-current="page"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Control</span></a>
         <a href="monitoreo.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pulse"/></svg><span>Monitoreo</span></a>
-        <a href="administracion.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gear"/></svg><span class="lbl-largo">Administración</span><span class="lbl-corto" aria-hidden="true">Admin</span></a>
+        <a href="administracion.html" aria-label="Administración"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gear"/></svg><span class="lbl-largo">Administración</span><span class="lbl-corto" aria-hidden="true">Admin</span></a>
       </nav>
+      <div id="panelConectividad" class="estado-barra"></div>
+      </div>
       <button id="btnClave" class="btn btn-sm btn-outline-warning btn-clave" type="button">
         <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-key"/></svg><span>Sin clave</span>
       </button>
@@ -40,84 +44,93 @@
   </header>
 
   <main id="contenido" class="container-xl contenido-control">
-    <section id="panelConectividad" aria-label="Estado de la conectividad"></section>
+    <!-- Mando horizontal: conducción a la izquierda, acciones y DETENER al centro, brazo y pala a la derecha -->
+    <section id="mando" class="tarjeta mando" data-modo="pulso" aria-labelledby="tMando">
+      <h2 id="tMando" class="visually-hidden">Mando de la excavadora</h2>
 
-    <section class="tarjeta tarjeta-control" aria-labelledby="tCond">
-      <div class="tarjeta-h control-h">
-        <h2 id="tCond" class="visually-hidden">Conducción</h2>
-        <div class="segmento" role="tablist" aria-label="Modo de manejo">
-          <button type="button" role="tab" id="tabPulso" data-modo="pulso" aria-controls="vistaPulso" aria-selected="true">
-            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Pulso</span></button>
-          <button type="button" role="tab" id="tabJoystick" data-modo="joystick" aria-controls="vistaJoystick" aria-selected="false" tabindex="-1">
-            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-joy"/></svg><span>Joystick</span></button>
-          <button type="button" role="tab" id="tabVoz" data-modo="voz" aria-controls="vistaVoz" aria-selected="false" tabindex="-1">
-            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg><span>Voz</span></button>
-        </div>
+      <div class="segmento mando-modos" role="group" aria-label="Modo de manejo">
+        <button type="button" data-modo="pulso" aria-pressed="true" aria-label="Modo Pulso" title="Pulso">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Pulso</span></button>
+        <button type="button" data-modo="joystick" aria-pressed="false" aria-label="Modo Joystick" title="Joystick">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-joy"/></svg><span>Joystick</span></button>
+        <button type="button" data-modo="voz" aria-pressed="false" aria-label="Modo Voz" title="Voz">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg><span>Voz</span></button>
       </div>
 
       <div id="aviso" class="aviso aviso-linea" role="status" hidden></div>
 
-      <div class="control-cuerpo">
-        <div class="zona-mando">
-          <div id="vistaPulso" class="vista" role="tabpanel" aria-labelledby="tabPulso">
-            <div id="cruceta" class="cruceta"></div>
-          </div>
-
-          <div id="vistaJoystick" class="vista" role="tabpanel" aria-labelledby="tabJoystick" hidden>
-            <div id="joystick" class="joy deshabilitado" tabindex="0" role="application"
-                 aria-label="Joystick de conducción. Arrastra la perilla o mantén una flecha del teclado; al soltar se envía DETENER."
-                 aria-describedby="ayudaModo">
+      <div class="pad pad-izq" role="group" aria-labelledby="tPadIzq" data-vista="pulso joystick">
+        <h3 id="tPadIzq" class="pad-titulo">Conducción</h3>
+        <div class="pad-zona">
+          <div id="cruceta" class="cruceta" data-vista="pulso"></div>
+          <div id="joystick" class="joy deshabilitado" tabindex="0" role="application" data-vista="joystick" hidden
+               aria-label="Joystick de conducción. Arrastra la perilla o mantén una flecha del teclado; al soltar se envía DETENER."
+               aria-describedby="ayudaModo">
               <span class="joy-mk mk-arriba" data-dir="arriba"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-up"/></svg></span>
               <span class="joy-mk mk-abajo" data-dir="abajo"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-down"/></svg></span>
               <span class="joy-mk mk-izquierda" data-dir="izquierda"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-left"/></svg></span>
               <span class="joy-mk mk-derecha" data-dir="derecha"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-right"/></svg></span>
-              <div id="joyPerilla" class="joy-perilla"></div>
-            </div>
-          </div>
-
-          <div id="vistaVoz" class="vista vista-voz" role="tabpanel" aria-labelledby="tabVoz" hidden>
-            <div class="voz">
-              <div class="voz-fila">
-                <button id="btnMic" class="mic" type="button" aria-pressed="false" aria-describedby="txtMic">
-                  <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg>
-                </button>
-                <div class="voz-transcr">
-                  <p id="txtMic" class="voz-mic-txt">Toca el micrófono y habla</p>
-                  <p id="vozTexto">Di una orden, por ejemplo: «avanza».</p>
-                  <p id="vozResultado" class="voz-res" aria-live="polite"></p>
-                </div>
-              </div>
-              <p id="vozEstado" class="voz-estado"></p>
-              <div class="voz-fila voz-opciones">
-                <div class="form-check form-switch m-0">
-                  <input id="chkManosLibres" class="form-check-input" type="checkbox" role="switch">
-                  <label class="form-check-label" for="chkManosLibres">Manos libres</label>
-                </div>
-                <form id="formOrden" class="input-group input-group-sm flex-grow-1">
-                  <input id="txtOrden" class="form-control" type="text" maxlength="120" autocomplete="off" spellcheck="false"
-                         placeholder="…o escribe una orden" aria-label="Orden escrita">
-                  <button id="btnOrden" class="btn btn-primary" type="submit">Enviar</button>
-                </form>
-              </div>
-              <div id="chipsVoz" class="chips" aria-label="Frases de ejemplo"></div>
-            </div>
+            <div id="joyPerilla" class="joy-perilla"></div>
           </div>
         </div>
+      </div>
 
-        <div id="secundarios" class="secundarios" role="group" aria-label="Acciones del catálogo"></div>
+      <div class="pad-centro">
+        <div id="secundarios" class="secundarios" role="group" aria-label="Luz, sonido y encendido"></div>
+        <button id="btnStop" class="stop" type="button" aria-describedby="stopEstado">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-stop"/></svg>
+          <span>DETENER</span>
+          <small id="stopEstado" class="stop-estado" aria-live="polite"></small>
+        </button>
+      </div>
+
+      <div class="pad pad-der" role="group" aria-labelledby="tPadDer" data-vista="pulso joystick">
+        <h3 id="tPadDer" class="pad-titulo">Brazo y pala</h3>
+        <div class="pad-zona">
+          <div id="crucetaBrazo" class="cruceta" data-vista="pulso"></div>
+          <div id="joystickBrazo" class="joy joy-brazo deshabilitado" tabindex="0" role="application" data-vista="joystick" hidden
+               aria-label="Joystick del brazo y la pala. Arriba y abajo mueven el brazo; izquierda y derecha giran la pala; al soltar se envía DETENER."
+               aria-describedby="ayudaModo">
+              <span class="joy-mk mk-arriba" data-dir="arriba"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-chev-up"/></svg></span>
+              <span class="joy-mk mk-abajo" data-dir="abajo"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-chev-down"/></svg></span>
+              <span class="joy-mk mk-izquierda" data-dir="izquierda"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-rot-l"/></svg></span>
+              <span class="joy-mk mk-derecha" data-dir="derecha"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-rot-r"/></svg></span>
+            <div id="joyPerillaBrazo" class="joy-perilla"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vistaVoz" class="vista-voz" data-vista="voz" role="group" aria-label="Control por voz" hidden>
+        <div class="voz">
+          <div class="voz-fila">
+            <button id="btnMic" class="mic" type="button" aria-pressed="false" aria-describedby="txtMic">
+              <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg>
+            </button>
+            <div class="voz-transcr">
+              <p id="txtMic" class="voz-mic-txt">Toca el micrófono y habla</p>
+              <p id="vozTexto">Di una orden, por ejemplo: «avanza».</p>
+              <p id="vozResultado" class="voz-res" aria-live="polite"></p>
+            </div>
+          </div>
+          <p id="vozEstado" class="voz-estado"></p>
+          <div class="voz-fila voz-opciones">
+            <div class="form-check form-switch m-0">
+              <input id="chkManosLibres" class="form-check-input" type="checkbox" role="switch">
+              <label class="form-check-label" for="chkManosLibres">Manos libres</label>
+            </div>
+            <form id="formOrden" class="input-group input-group-sm flex-grow-1">
+              <input id="txtOrden" class="form-control" type="text" maxlength="120" autocomplete="off" spellcheck="false"
+                     placeholder="…o escribe una orden" aria-label="Orden escrita">
+              <button id="btnOrden" class="btn btn-primary" type="submit">Enviar</button>
+            </form>
+          </div>
+          <div id="chipsVoz" class="chips" aria-label="Frases de ejemplo"></div>
+        </div>
       </div>
 
       <p id="lineaEstado" class="linea-estado" aria-live="polite">Listo.</p>
       <p id="ayudaModo" class="visually-hidden"></p>
     </section>
-
-    <div class="barra-stop">
-      <button id="btnStop" class="stop" type="button" aria-describedby="stopEstado">
-        <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-stop"/></svg>
-        <span>DETENER</span>
-        <small id="stopEstado" class="stop-estado" aria-live="polite"></small>
-      </button>
-    </div>
   </main>
 
   <footer class="pie">

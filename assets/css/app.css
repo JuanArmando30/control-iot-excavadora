@@ -17,7 +17,7 @@
   --mal: #ff6b84;
   --neutro: #9aa6c8;
   --radio: 18px;
-  --stop-alto: 64px;
+  --stop-alto: 48px;
   --sab: env(safe-area-inset-bottom, 0px);
   --bs-body-bg: var(--fondo);
   --bs-body-color: var(--texto);
@@ -107,6 +107,39 @@ body {
 @media (min-width: 768px) {
   .barra-sup-in { grid-template-columns: auto 1fr auto; grid-template-areas: "marca nav clave"; }
   .nav-sec { justify-self: center; width: min(460px, 100%); }
+}
+
+/* ----------------- Menú con indicadores (página de Control) -------------- */
+/* Un solo bloque: secciones a la izquierda y WSS · AWS · RDS a la derecha. */
+.menu {
+  grid-area: nav; display: flex; align-items: stretch; gap: 4px; min-width: 0;
+  padding: 4px; border-radius: 14px; background: #0a1434; border: 1px solid var(--panel-borde);
+}
+.menu .nav-sec { flex: 1 1 auto; display: flex; gap: 2px; min-width: 0; padding: 0; border: 0; background: none; }
+.menu .nav-sec a { flex: 1 1 auto; min-width: 0; padding-inline: 6px; }
+.estado-barra { flex: none; display: flex; }
+.estado-btn {
+  display: flex; align-items: center; gap: 1px; min-height: 38px; padding: 0 3px 0 5px;
+  border: 0; border-left: 1px solid var(--panel-borde); border-radius: 0 10px 10px 0;
+  background: transparent; color: var(--tenue); font: inherit; touch-action: manipulation;
+}
+.estado-btn:hover { background: #ffffff0d; }
+.estado-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 30px; padding: 0 2px;
+  font-size: .58rem; font-weight: 700; letter-spacing: .05em; line-height: 1;
+}
+.estado-ico { display: inline-flex; }
+.estado-chip .ico { width: 15px; height: 15px; vertical-align: 0; }
+.estado-chip[data-nivel="ok"] .ico { color: var(--ok); }
+.estado-chip[data-nivel="medio"] .ico { color: var(--medio); }
+.estado-chip[data-nivel="mal"] .ico, .estado-chip[data-nivel="mal"] .estado-nombre { color: var(--mal); }
+.estado-chip[data-nivel="neutro"] .ico { color: var(--neutro); }
+
+@media (max-width: 575.98px) { .menu .nav-sec .ico { display: none; } }   /* en teléfono: solo texto en las secciones */
+@media (min-width: 768px) { .menu { justify-self: center; width: min(600px, 100%); } .menu .nav-sec { width: auto; } }
+@media (min-width: 992px) {
+  .estado-chip { flex-direction: row; gap: 4px; padding: 0 5px; font-size: .68rem; }
+  .estado-btn { padding: 0 6px 0 8px; }
 }
 
 /* ------------------------------- Contenido ------------------------------ */
@@ -207,22 +240,24 @@ body {
   font: inherit; font-size: .88rem; font-weight: 600; touch-action: manipulation;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-.segmento button[aria-selected="true"] { background: linear-gradient(180deg, #27449f, #1b3278); color: #fff; }
-@media (max-width: 479.98px) { .tarjeta-h .segmento { width: 100%; } }
+.segmento button[aria-selected="true"], .segmento button[aria-pressed="true"] { background: linear-gradient(180deg, #27449f, #1b3278); color: #fff; }
 
 /* --------------------------- Botones de control ------------------------- */
 .cbtn {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  min-height: 72px; min-width: 0; padding: 8px 6px 14px; border-radius: 16px; border: 1px solid #3550a8;
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 56px; min-width: 0; padding: 4px 3px; border-radius: 14px; border: 1px solid #3550a8;
   background: linear-gradient(180deg, #1a2f78, #10215a); color: var(--texto);
-  font: inherit; font-size: .74rem; font-weight: 700; letter-spacing: .02em; line-height: 1.15; text-align: center;
+  font: inherit; font-size: .66rem; font-weight: 700; letter-spacing: .02em; line-height: 1.15; text-align: center;
   box-shadow: 0 5px 14px #0007, inset 0 1px 0 #ffffff1a;
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   transition: transform .06s, box-shadow .15s, border-color .15s, background .15s;
 }
-.cbtn .ico { width: 28px; height: 28px; }
-.cbtn-txt { overflow-wrap: normal; word-break: normal; max-width: 100%; }
-.cbtn-estado { position: absolute; bottom: 3px; left: 0; right: 0; font-size: .6rem; font-weight: 600; letter-spacing: .04em; }
+.cbtn .ico { width: 22px; height: 22px; }
+.cbtn-txt, .cbtn-estado { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbtn-estado { font-size: .92em; font-weight: 600; letter-spacing: .03em; }
+.cbtn-estado:empty { display: none; }
+/* Mientras se muestra el estado (Enviando, Aceptado, Error) sustituye al nombre: una sola línea de texto. */
+.cbtn.is-sending .cbtn-txt, .cbtn.is-ok .cbtn-txt, .cbtn.is-error .cbtn-txt { display: none; }
 .cbtn.is-pressed { transform: translateY(2px) scale(.97); border-color: var(--acento); background: linear-gradient(180deg, #2a52c9, #17317f); box-shadow: 0 0 22px #46d3ff66; }
 .cbtn.is-sending { border-color: var(--medio); }
 .cbtn.is-sending .cbtn-estado { color: var(--medio); }
@@ -234,25 +269,26 @@ body {
 .cbtn:disabled { opacity: .4; filter: saturate(.4); cursor: not-allowed; box-shadow: none; }
 .cbtn.sin-catalogo { border-style: dashed; }
 
+/* Cruceta: se ajusta al hueco de su mando (.pad-zona es el contenedor de tamaño).
+   En vertical puede ser algo más alta que ancha para dar botones más cómodos. */
 .cruceta {
-  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px;
-  width: min(100%, 330px, 52vh); aspect-ratio: 1; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: clamp(4px, 3cqmin, 10px);
+  width: min(100cqw, 340px); height: min(100cqh, 125cqw, 425px);
 }
-.cruceta .cbtn { min-height: 0; }
+.cruceta .cbtn { min-height: 0; padding: 2px; letter-spacing: 0; font-size: clamp(.53rem, 5.4cqmin, .76rem); }
+.cruceta .cbtn .ico { width: clamp(18px, 13cqmin, 30px); height: clamp(18px, 13cqmin, 30px); }
 .cruceta .dir-arriba { grid-area: 1 / 2; } .cruceta .dir-izquierda { grid-area: 2 / 1; }
 .cruceta .dir-derecha { grid-area: 2 / 3; } .cruceta .dir-abajo { grid-area: 3 / 2; }
-.cbtn-centro { grid-area: 2 / 2; display: grid; place-items: center; }
-.cbtn-stop {
-  width: 100%; height: 100%; border-radius: 50%; border: 2px solid #b8364f; color: #ffc2cf;
-  background: radial-gradient(circle, #3a1020, #220b16); display: grid; place-items: center; touch-action: none;
+.cruceta-eje {
+  grid-area: 2 / 2; place-self: center; width: 70%; aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center; color: #6d85d0; border: 1px dashed #3a55ad88; background: #0a143499;
 }
-.cbtn-stop .ico { width: 32px; height: 32px; }
-.cbtn-stop:active { box-shadow: 0 0 24px #ff6b84aa; }
+.cruceta-eje .ico { width: 52%; height: 52%; stroke-width: 1.6; }
 
-.secundarios { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); }
-.cbtn-sec { min-height: 52px; padding: 6px 4px 10px; gap: 2px; font-size: .64rem; border-radius: 12px; }
-.cbtn-sec .ico { width: 20px; height: 20px; }
-.cbtn-sec .cbtn-estado { bottom: 1px; font-size: .55rem; }
+.secundarios { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); min-height: 0; }
+.secundarios .vacio { margin: 0; font-size: .78rem; text-align: center; }
+.cbtn-sec { min-height: 52px; border-radius: 12px; }
 
 /* -------------------------------- Joystick ------------------------------ */
 .joy {
@@ -277,7 +313,6 @@ body {
   box-shadow: 0 8px 20px #000b, 0 0 26px #46d3ff77; transition: transform .16s cubic-bezier(.2, .9, .3, 1.3); will-change: transform;
 }
 .joy.arrastrando .joy-perilla { transition: none; }
-.joy-estado { text-align: center; font-weight: 700; color: var(--acento); margin: 10px 0 0; min-height: 1.5em; }
 
 /* ---------------------------------- Voz --------------------------------- */
 .voz { display: grid; gap: 8px; width: 100%; max-width: 560px; align-content: center; }
@@ -334,26 +369,25 @@ body {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 1090;
   bottom: calc(var(--sab) + 16px); width: min(92vw, 420px); display: grid; gap: 8px; pointer-events: none;
 }
-.pagina-control .toasts { bottom: calc(var(--sab) + var(--stop-alto) + 56px); }
 .toast-msg { padding: 11px 14px; border-radius: 12px; font-size: .9rem; background: #0c1a45f2; border: 1px solid var(--panel-borde); box-shadow: 0 8px 24px #000a; }
 .toast-msg.ok { border-color: #1f9c76; } .toast-msg.error { border-color: #b8364f; background: #35101cf2; } .toast-msg.info { border-color: #25508f; }
 
 .modal-content { background: linear-gradient(180deg, #0f1e4c, #0a1535); border: 1px solid var(--panel-borde); border-radius: 20px; }
 
-/* -------------------------- DETENER y pie de página --------------------- */
-.barra-stop { flex: none; padding-top: 10px; }
+/* -------------------------------- DETENER ------------------------------- */
 .stop {
-  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 1100px; margin: 0 auto;
-  min-height: var(--stop-alto); border-radius: 16px; border: 2px solid #ff8fa3; color: #fff;
-  font: inherit; font-size: 1.25rem; font-weight: 800; letter-spacing: .12em; touch-action: manipulation;
-  background: linear-gradient(180deg, #e0334f, #a81c37); box-shadow: 0 8px 26px #ff4d6d55;
+  display: flex; align-items: center; justify-content: center; gap: 4px 10px; width: 100%; min-width: 0;
+  min-height: var(--stop-alto); padding: 4px 8px; border-radius: 16px; border: 2px solid #ff8fa3; color: #fff;
+  font: inherit; font-size: 1.02rem; font-weight: 800; letter-spacing: .12em; touch-action: manipulation;
+  background: linear-gradient(180deg, #e0334f, #a81c37); box-shadow: 0 6px 18px #ff4d6d44;
 }
-.stop .ico { width: 26px; height: 26px; }
+.stop .ico { width: 20px; height: 20px; }
 .stop:active { transform: scale(.985); box-shadow: 0 0 34px #ff4d6dcc; }
 .stop.is-sending { border-color: var(--medio); }
 .stop.is-ok { border-color: var(--ok); }
 .stop.is-error { border-color: #fff; background: linear-gradient(180deg, #7a1022, #4d0a16); }
 .stop-estado { font-size: .72rem; font-weight: 600; letter-spacing: .04em; }
+.stop-estado:empty { display: none; }
 
 .pie {
   flex-shrink: 0; padding: 14px 0; border-top: 1px solid #1a2a60; background: #050b1fcc;
@@ -361,96 +395,127 @@ body {
 }
 .pie strong { color: var(--texto); }
 
-/* ------------------------ Control en una sola pantalla ------------------ */
+/* ==========================================================================
+   CONTROL · mando horizontal en una sola pantalla
+   Base (teléfono vertical): los dos mandos lado a lado y el bloque central
+   (luz, sonido, encendido y DETENER) debajo.
+   Horizontal / pantallas anchas: mando · centro · mando, como un control real.
+   ========================================================================== */
 .pagina-control { height: 100vh; height: 100dvh; overflow: hidden; }
 .pagina-control .barra-sup { position: static; }
+.pagina-control .pie { padding: 6px 0; font-size: .74rem; }
+.pagina-control .toasts { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 8px); }   /* nunca tapan DETENER */
 .contenido-control {
   flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
-  padding-top: 10px; padding-bottom: 10px; max-width: 1040px;
+  padding-top: 8px; padding-bottom: 8px; max-width: 1100px;
 }
-.tarjeta-control { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
-.control-h { margin: 0; }
-.control-h .segmento { width: 100%; }
-.aviso-linea { margin: 0; padding: 6px 10px; font-size: .8rem; }
-.control-cuerpo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
-.zona-mando { flex: 1 1 auto; min-height: 150px; position: relative; container-type: size; }
-.vista { position: absolute; inset: 0; display: grid; place-items: center; }
-.vista-voz { overflow-y: auto; place-items: center; padding: 2px; }
-.zona-mando .cruceta { width: min(100cqw, 100cqh, 340px); gap: clamp(6px, 2.5cqh, 10px); }
-.zona-mando .joy { width: min(100cqw, 100cqh, 300px); }
-.cruceta .cbtn { font-size: clamp(.56rem, 3.4cqmin, .74rem); padding: 4px 3px; }
-.cruceta .cbtn-txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cruceta .cbtn .ico { width: clamp(18px, 8cqmin, 28px); height: clamp(18px, 8cqmin, 28px); }
+
+.mando {
+  --g: 8px;
+  flex: 1 1 auto; min-height: 0; padding: 8px; border-radius: 22px;
+  display: grid; column-gap: var(--g);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "modos modos" "aviso aviso" "izq der" "centro centro" "estado estado";
+}
+.mando[data-modo="voz"] { grid-template-areas: "modos modos" "aviso aviso" "voz voz" "centro centro" "estado estado"; }
+.mando-modos { grid-area: modos; display: flex; width: 100%; }
+.mando .aviso-linea { grid-area: aviso; margin: var(--g) 0 0; padding: 6px 10px; font-size: .8rem; }
+.pad-izq { grid-area: izq; } .pad-der { grid-area: der; }
+.pad-centro { grid-area: centro; }
+.vista-voz { grid-area: voz; }
+.pad, .pad-centro, .vista-voz, .linea-estado { margin-top: var(--g); }
+
+.pad {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 0; padding: 6px 4px 4px;
+  border-radius: 18px; background: #0a143480; border: 1px solid #1a2a60;
+}
+.pad-titulo {
+  margin: 0; text-align: center; font-size: .64rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pad-zona { flex: 1 1 auto; min-height: 0; container-type: size; display: grid; place-items: center; }
+.pad-zona .joy { width: min(100cqw, 100cqh, 300px); margin: 0; }
+
+.pad-centro { display: flex; flex-direction: column; gap: var(--g); min-width: 0; min-height: 0; }
+.vista-voz { min-height: 0; overflow-y: auto; display: grid; place-items: center; padding: 2px; }
+
 .linea-estado {
-  margin: 0; font-size: .76rem; color: var(--tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  grid-area: estado; margin-bottom: 0; font-size: .74rem; color: var(--tenue);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   border-top: 1px solid #1a2a5e; padding-top: 6px;
 }
 .linea-estado[data-tipo="error"] { color: var(--mal); }
-.pagina-control .pie { padding: 6px 0; font-size: .74rem; }
-.pagina-control .conn { margin-bottom: 8px; }
 
-@media (min-width: 576px) { .control-h .segmento { width: auto; } .tarjeta-control { padding: 14px; } }
+@media (min-width: 576px) { .mando { --g: 10px; padding: 12px; } .pad { padding: 8px; } }
 
-/* Escritorio / tableta horizontal: mando a la izquierda, acciones a la derecha */
-@media (min-width: 900px) {
-  .control-cuerpo { flex-direction: row; align-items: stretch; }
-  .secundarios { width: 280px; flex: none; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: center; }
-  .cbtn-sec { min-height: 64px; font-size: .72rem; }
-  .cbtn-sec .ico { width: 24px; height: 24px; }
+/* Horizontal (teléfono girado, tableta, escritorio): mando · centro · mando */
+@media (orientation: landscape), (min-width: 700px) {
+  .mando {
+    --centro: clamp(168px, 24vw, 280px);
+    grid-template-columns: minmax(0, 1fr) var(--centro) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "aviso aviso aviso" "izq modos der" "izq centro der" "estado estado estado";
+  }
+  .mando[data-modo="voz"] {
+    grid-template-columns: minmax(0, 1fr) var(--centro);
+    grid-template-areas: "aviso aviso" "voz modos" "voz centro" "estado estado";
+  }
+  .mando .aviso-linea { margin: 0 0 var(--g); }
+  .pad, .vista-voz { margin-top: 0; }
+  .pad-centro { justify-content: center; }
+  .cruceta { width: min(100cqw, 100cqh, 340px); height: auto; aspect-ratio: 1; }
+  .secundarios { grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); }
+  .stop { min-height: 56px; letter-spacing: .1em; }
 }
+@media (orientation: landscape) and (max-width: 899.98px), (min-width: 700px) and (max-width: 899.98px) {
+  .mando-modos button span { display: none; }       /* solo iconos; el nombre sigue en aria-label y title */
+  .mando-modos button { padding-inline: 6px; }
+}
+@media (min-width: 900px) and (min-height: 600px) {
+  .cbtn-sec { min-height: 68px; font-size: .74rem; }
+  .cbtn-sec .ico { width: 26px; height: 26px; }
+  .pad-titulo { font-size: .74rem; }
+  .stop { min-height: 64px; font-size: 1.1rem; }
+  .stop .ico { width: 22px; height: 22px; }
+}
+
+/* Teléfonos bajos en vertical: la línea de estado cede su espacio a los mandos (los errores siguen saliendo como aviso) */
+@media (orientation: portrait) and (max-height: 700px) { .linea-estado { display: none; } }
 
 /* Pantallas muy bajas en vertical: se permite desplazamiento como último recurso */
 @media (max-height: 600px) and (orientation: portrait) {
   .pagina-control { height: auto; min-height: 100dvh; overflow: auto; }
-  .zona-mando { min-height: 220px; flex: none; height: 240px; }
+  .mando { flex: none; grid-template-rows: auto auto 210px auto auto; }
 }
 
 /* ------------------- Teléfono horizontal (poca altura) ------------------ */
 @media (orientation: landscape) and (max-height: 520px) {
-  :root { --stop-alto: 42px; }
+  :root { --stop-alto: 44px; }
   .barra-sup { position: static; }
-  .barra-sup-in { grid-template-columns: auto 1fr auto; grid-template-areas: "marca nav clave"; padding-block: 4px; }
+  .barra-sup-in { grid-template-columns: auto 1fr auto; grid-template-areas: "marca nav clave"; padding-block: 3px; }
   .marca-txt small { display: none; }
-  .marca img { width: 30px; height: 30px; }
-  .nav-sec { width: min(420px, 100%); justify-self: center; }
-  .nav-sec a { min-height: 32px; padding: 3px 6px; }
-  .btn-clave { min-height: 34px; }
-  .stop { font-size: 1rem; }
-  .barra-stop { padding-top: 6px; }
-  .pagina-control .pie { padding: 3px 0; }
+  .marca img { width: 28px; height: 28px; }
+  .nav-sec { width: min(420px, 100%); justify-self: center; padding: 3px; }
+  .nav-sec a { min-height: 30px; padding: 2px 6px; }
+  .btn-clave { min-height: 32px; }
+  .nav-sec .lbl-largo { display: none; }
+  .nav-sec .lbl-corto { display: inline; }
+  .pagina-control .pie { padding: 2px 0; font-size: .68rem; }
 
-  /* Indicadores y botón «Comprobar» en una sola fila */
-  .pagina-control .conn { display: flex; gap: 8px; align-items: stretch; margin-bottom: 6px; }
-  .pagina-control .conn-grid { flex: 1; }
-  .pagina-control .conn-pie { margin: 0; }
-  .pagina-control .conn-nota { display: none; }
-  .pagina-control .conn-btn .lbl-largo { display: none; }
-  .conn-sub, .conn-detalle { display: none; }
-  .conn-item { padding: 4px 10px; align-items: center; }
-  .conn-ico { font-size: 1rem; padding: 0; }
-  .conn-txt { flex-direction: row; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-  .conn-estado { font-size: .85rem; }
+  .pagina-control .marca-txt { display: none; }      /* solo el logo: el espacio es para menú e indicadores */
+  .menu { padding: 3px; width: min(560px, 100%); justify-self: center; }
+  .menu .nav-sec { padding: 0; width: auto; }
+  .estado-btn { min-height: 30px; }
 
-  /* Pestañas y mando a la izquierda, acciones a la derecha */
-  .contenido-control { padding-top: 6px; padding-bottom: 4px; }
-  .tarjeta-control {
-    display: grid; padding: 8px; gap: 6px 12px;
-    grid-template-columns: minmax(0, 1fr) min(46vw, 360px);
-    grid-template-rows: auto auto minmax(0, 1fr);
-    grid-template-areas: "mando tabs" "mando aviso" "mando acciones";
-  }
-  .control-h { grid-area: tabs; }
-  .control-h .segmento { width: 100%; }
-  .segmento button { min-height: 32px; padding: 3px 8px; }
-  .aviso-linea { grid-area: aviso; }
-  .control-cuerpo { display: contents; }
-  .zona-mando { grid-area: mando; min-height: 0; }
-  .secundarios { grid-area: acciones; grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: center; }
-  .cbtn-sec { min-height: 46px; }
-  .linea-estado { display: none; }
-  .cruceta .cbtn-txt { display: none; }             /* solo iconos; el nombre sigue en aria-label */
-  .cruceta .cbtn .ico { width: clamp(22px, 12cqmin, 30px); height: clamp(22px, 12cqmin, 30px); }
-  .cruceta .cbtn { padding: 2px; }
+  .contenido-control { padding-top: 5px; padding-bottom: 4px; }
+  .mando { --g: 6px; padding: 6px; border-radius: 18px; }
+  .pad { padding: 3px; border-radius: 14px; }
+  .pad-titulo, .linea-estado { display: none; }     /* el título sigue asociado al grupo con aria-labelledby */
+  .mando .aviso-linea { padding: 3px 10px; font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .segmento button { min-height: 32px; padding-block: 3px; }
+  .cbtn-sec { min-height: 44px; }
+  .stop { min-height: 44px; font-size: .95rem; }
   .voz-fila { gap: 8px; }
   .mic { width: 60px; height: 60px; }
 }
