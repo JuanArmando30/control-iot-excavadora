@@ -1,6 +1,8 @@
 /**
  * Reconocimiento de voz (Web Speech API). Solo captura texto: la decisión
  * de qué enviar la toma la página con el mismo servicio de comandos.
+ * Entrega TODAS las alternativas que propone el reconocedor (hasta 3), para
+ * que el intérprete use la primera que tenga sentido.
  * Cada sesión usa un reconocedor nuevo (Chrome Android falla al reutilizarlo).
  */
 import { esParo } from "../domain/interprete-voz.js";
@@ -18,7 +20,7 @@ export const vozSoportada = () => !!(window.SpeechRecognition || window.webkitSp
 
 export class ControlVoz {
   /**
-   * @param {{onFrase:(texto:string)=>void, onParoInmediato:()=>void,
+   * @param {{onFrase:(alternativas:string[])=>void, onParoInmediato:()=>void,
    *          onEstado:(txt:string)=>void, onTexto:(txt:string, final:boolean)=>void,
    *          onCambio:(escuchando:boolean)=>void}} cb
    */
@@ -68,8 +70,9 @@ export class ControlVoz {
           if (esParo(txt)) this._paro();              // "alto" sin esperar el resultado final
           continue;
         }
-        if (esParo(txt)) { this._paro(); continue; }
-        this.cb.onFrase(txt);
+        const alternativas = Array.from(res, (a) => a.transcript).filter((t) => t && t.trim());
+        if (alternativas.some(esParo)) { this._paro(); continue; }   // "alto" en cualquier alternativa
+        this.cb.onFrase(alternativas);
         if (!this.manosLibres) { try { rec.stop(); } catch { /* */ } }
       }
     };

@@ -35,8 +35,27 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | D1 | Toca DETENER | `POST` con DETENER al instante (pointerdown), estado *Registrado* |
 | D2 | Toca Avanzar e inmediatamente DETENER | Si AVANZAR se confirma después de pedir el paro, se envía un segundo DETENER automático (reafirmación) |
 | D3 | Espacio o Esc en el teclado | DETENER |
-| D4 | Di «alto» en modo Voz | DETENER sin esperar el resultado final del reconocimiento |
+| D4 | Di «alto» (o «detente», «frena», «quieto») en modo Voz | DETENER sin esperar el resultado final del reconocimiento; también si «alto» aparece solo en una de las alternativas del reconocedor |
 | D5 | DETENER durante una DEMO | Llama a `POST …/demos/cancelar`; llega `demo_cancelada` con `detenido_con: "DETENER"` |
+
+## V · Voz (modo Voz; también sirve escribir la frase en «…o escribe una orden»)
+
+| # | Frase | Resultado esperado |
+|---|---|---|
+| V1 | «regresa», «échate pa'trás», «retrocede» | RETROCEDER (origen `WEB_VOZ`) |
+| V2 | «voltea a la izquierda», «dale a la derecha», «hacia el lado derecho» | GIRAR_IZQUIERDA / GIRAR_DERECHA |
+| V3 | «sigue derecho», «camina», «avanza un poquito» | AVANZAR («derecho» = recto, salvo «lado derecho») |
+| V4 | «súbele al brazo», «bájale a la pala», «levanta la pala» | SUBIR_BRAZO / BAJAR_BRAZO |
+| V5 | «gira la cuchara a la izquierda», «pala a la derecha» | GIRAR_PALA_IZQUIERDA / GIRAR_PALA_DERECHA |
+| V6 | «prende la luz», «toca el claxon», «enciende el motor» | LUZ / SONIDO / ENCENDER_APAGAR (el sustantivo manda: «prende la luz» no es encendido) |
+| V7 | «avanza y luego gira a la derecha» | AVANZAR y, 1.2 s después, GIRAR_DERECHA; la pantalla muestra «Avanzar → Girar derecha» |
+| V8 | «avanza tres veces» y DETENER durante la secuencia | Se envía el primer AVANZAR, DETENER corta el resto; pantalla «… cancelada con DETENER» |
+| V9 | «a la izquierda, no, mejor a la derecha» | Solo GIRAR_DERECHA (corrección) |
+| V10 | «no avances» | No envía nada («Entendido: no hago nada») |
+| V11 | «otra vez» | Repite la última orden de voz |
+| V12 | Errores típicos del reconocedor: «abanza», «isquierda», «retro sede» | Se entienden como avanza, izquierda, retrocede |
+| V13 | «para», «quieto», «no te muevas», «párale» | DETENER inmediato. «para atrás» **no** detiene: retrocede |
+| V14 | «hola qué tal» | No envía nada y sugiere frases de ejemplo |
 
 ## M · DEMO
 

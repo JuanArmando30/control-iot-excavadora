@@ -101,6 +101,7 @@ Todo está en `js/config.js`. Si cambias el dominio, actualiza también `connect
 - `etiquetasCortas` e `iconos`: texto corto e icono por código, solo estéticos; el nombre del catálogo sigue en `title` y `aria-label`.
 - DETENER se identifica por **nombre** (`DETENER`), igual que el backend.
 - Teclado: flechas o `WASD` = conducción · `I` `K` = subir/bajar brazo · `J` `L` = girar pala · `Espacio`/`Esc` = DETENER.
+- Voz: `interprete-voz.js` entiende lenguaje natural sin IA ni servicios externos (vocabulario amplio, palabras parecidas, frases encadenadas con «y luego», repeticiones, correcciones). `voz: {pasoMs, maxPasos}` controla la pausa entre órdenes encadenadas y el tope por frase. Las palabras de paro se comparan exactas y siempre ganan.
 - En modo Joystick solo se sostiene **un** joystick a la vez (una orden en vuelo); mientras tanto el otro joystick y los botones centrales no responden.
 - `mantenerMs: 2400`: con el joystick sostenido se repite la **misma** orden cada 2.4 s (pensado para el firmware que se detiene a los ~3 s sin órdenes). `0` = solo en cada cambio de dirección.
 

@@ -95,6 +95,13 @@ export const CONFIG = Object.freeze({
    */
   brazo: Object.freeze({ arriba: 5, abajo: 6, izquierda: 7, derecha: 8 }),
 
+  /** Modo Voz: códigos de los accesorios y ritmo de las órdenes encadenadas. */
+  voz: Object.freeze({
+    luz: 10, sonido: 11, encender: 12,
+    pasoMs: 1200,      // pausa entre órdenes de una misma frase ("avanza y luego gira")
+    maxPasos: 6,       // tope de órdenes por frase (incluye repeticiones: "avanza tres veces")
+  }),
+
   /** El backend identifica el paro por nombre (comando_service.buscar_detener). */
   nombreDetener: "DETENER",
 

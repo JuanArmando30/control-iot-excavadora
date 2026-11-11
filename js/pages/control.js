@@ -27,9 +27,10 @@ const MODOS = ["pulso", "joystick", "voz"];
 const AYUDA = {
   pulso: "Pulso: cada toque envía una orden. Izquierda: conducción · derecha: brazo y pala.",
   joystick: "Joystick: arrastra una perilla (una a la vez); al soltar vuelve al centro y se envía DETENER.",
-  voz: "Voz: cada frase es una orden. Di «alto» para detener al instante.",
+  voz: "Voz: habla con naturalidad; puedes encadenar órdenes con «y luego». Di «alto» para detener al instante.",
 };
 const NOMBRE_MANDO = { conduccion: "Conducción", brazo: "Brazo y pala" };
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* ------------------------------ Estado ------------------------------ */
 let catalogo = new Catalogo();
@@ -95,6 +96,7 @@ function detenerMovimiento(origen) {
 async function detenerTodo(origen = O.boton) {
   vibrar(40);
   soltarMantenido();              // evita que soltar el joystick envíe un segundo DETENER
+  cancelarSecuenciaVoz("cancelada con DETENER");
   for (const j of Object.values(joysticks)) j.soltar();
   if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
   if (demo.activa) {
@@ -185,21 +187,73 @@ function pintarVoz(texto, tipo = "") {
   r.className = "voz-res " + tipo;
 }
 
-async function ejecutarFrase(texto) {
-  const i = interpretar(texto);
-  if (!i) { pintarVoz(`No entendí: «${texto}»`, "no"); return; }
+/** Secuencia de voz en curso: cambiar `id` la cancela (DETENER, otra frase o cambio de modo). */
+const vozSecuencia = { id: 0, ultima: [], plan: "" };
+
+/** Corta la secuencia de voz en curso (si hay) y lo dice en pantalla. */
+function cancelarSecuenciaVoz(motivo) {
+  if (vozSecuencia.plan) pintarVoz(`${vozSecuencia.plan} · ${motivo}.`, "no");
+  vozSecuencia.plan = "";
+  vozSecuencia.id++;
+}
+const nombreCodigo = (c) => Catalogo.etiqueta(catalogo.porCodigo(c));
+
+/**
+ * @param {string|string[]} entrada frase escrita o alternativas del reconocedor.
+ * Se usa la primera alternativa que se entienda; "alto" en cualquiera gana.
+ */
+async function ejecutarFrase(entrada) {
+  const opciones = [].concat(entrada).map((t) => String(t).trim()).filter(Boolean);
+  if (!opciones.length) return;
+  const lecturas = opciones.map((t) => ({ texto: t, i: interpretar(t) }));
+  const paro = lecturas.find((l) => l.i && (l.i.tipo === "stop" || l.i.tipo === "cancelar"));
+  const util = paro || lecturas.find((l) => l.i && (l.i.tipo !== "secuencia" || l.i.pasos.length)) || lecturas[0];
+  const { texto, i } = util;
+  if (util !== lecturas[0]) $("vozTexto").textContent = texto;     // muestra la alternativa que se usó
+
+  if (!i) { pintarVoz(`No entendí «${texto}». Prueba: «avanza», «sube el brazo», «prende la luz».`, "no"); return; }
   if (i.tipo === "stop" || i.tipo === "cancelar") { pintarVoz("DETENER", "ok"); await detenerTodo(O.voz); return; }
-  if (i.tipo === "demo") {
-    pintarVoz("Las DEMO se inician desde Monitoreo.", "no");
+  if (i.tipo === "demo") { pintarVoz("Las DEMO se inician desde Monitoreo.", "no"); return; }
+
+  let pasos = i.pasos || [];
+  if (i.tipo === "repetir") {
+    if (!vozSecuencia.ultima.length) { pintarVoz("No hay una orden anterior para repetir.", "no"); return; }
+    pasos = vozSecuencia.ultima;
+  }
+  if (!pasos.length) {
+    const negada = i.partes?.some((p) => p.negada);
+    pintarVoz(negada ? "Entendido: no hago nada." : `No entendí «${texto}». Prueba: «gira a la izquierda» o «baja la pala».`, negada ? "ok" : "no");
     return;
   }
-  const cmd = catalogo.porCodigo(i.codigo);
-  if (!cmd || !cmd.activo) { pintarVoz("Esa orden no está en el catálogo del vehículo.", "no"); return; }
+
+  // Valida todo contra el catálogo antes de mover nada.
+  const faltan = pasos.filter((c) => !catalogo.esActivo(c));
+  if (faltan.length) { pintarVoz(`No disponible en el catálogo: ${[...new Set(faltan)].map(nombreCodigo).join(", ")}.`, "no"); return; }
   if (!puedeMover()) { pintarVoz("Control bloqueado: " + motivoBloqueo(), "no"); return; }
-  pintarVoz(`${Catalogo.etiqueta(cmd)} · enviando…`, "ok");
-  const r = await enviar(cmd.codigo, O.voz);
-  if (r?.ok) pintarVoz(`${Catalogo.etiqueta(cmd)} · registrado por la API ✓`, "ok");
-  else if (r) pintarVoz(`${Catalogo.etiqueta(cmd)} · no se pudo enviar`, "no");
+
+  const ignorado = i.partes?.filter((p) => p.codigo == null && !p.negada).map((p) => `«${p.texto}»`) || [];
+  const plan = pasos.map(nombreCodigo).join(" → ");
+  const nota = ignorado.length ? ` (no entendí ${ignorado.join(", ")})` : "";
+  vozSecuencia.ultima = pasos;
+  await ejecutarSecuencia(pasos, plan, nota);
+}
+
+async function ejecutarSecuencia(pasos, plan, nota) {
+  const id = ++vozSecuencia.id;
+  vozSecuencia.plan = plan;
+  for (let k = 0; k < pasos.length; k++) {
+    if (id !== vozSecuencia.id) return;                                // cancelada
+    if (!puedeMover()) { vozSecuencia.plan = ""; pintarVoz(`${plan} · detenido: ${motivoBloqueo()}`, "no"); return; }
+    const avance = pasos.length > 1 ? ` (${k + 1}/${pasos.length})` : "";
+    pintarVoz(`${plan}${avance} · enviando ${nombreCodigo(pasos[k])}…${nota}`, "ok");
+    const r = await enviar(pasos[k], O.voz);
+    if (id !== vozSecuencia.id) return;
+    if (!r?.ok) { vozSecuencia.plan = ""; pintarVoz(`${plan} · no se pudo enviar ${nombreCodigo(pasos[k])}.`, "no"); return; }
+    if (k < pasos.length - 1) await espera(CONFIG.voz.pasoMs);
+  }
+  if (id !== vozSecuencia.id) return;
+  vozSecuencia.plan = "";
+  pintarVoz(`${plan} · registrado por la API ✓${nota}`, "ok");
 }
 
 $("btnMic").addEventListener("click", () => {
@@ -306,7 +360,7 @@ function leerModo() {
 
 function setModo(nuevo) {
   if (!MODOS.includes(nuevo)) nuevo = "pulso";
-  if (modo === "voz" && nuevo !== "voz") voz.detener();
+  if (modo === "voz" && nuevo !== "voz") { voz.detener(); cancelarSecuenciaVoz("cancelada al cambiar de modo"); }
   for (const j of Object.values(joysticks)) j.soltar();
   modo = nuevo;
   try { localStorage.setItem("vehiculoIot.modo", nuevo); } catch { /* */ }
