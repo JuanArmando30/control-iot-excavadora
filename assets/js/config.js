@@ -81,6 +81,7 @@ export const CONFIG = Object.freeze({
     boton: "WEB_BOTON",
     teclado: "WEB_TECLADO",
     giroscopio: "WEB_GIROSCOPIO",
+    ia: "WEB_IA",
   }),
 
   /**
@@ -101,6 +102,25 @@ export const CONFIG = Object.freeze({
     luz: 10, sonido: 11, encender: 12,
     pasoMs: 1200,      // pausa entre órdenes de una misma frase ("avanza y luego gira")
     maxPasos: 6,       // tope de órdenes por frase (incluye repeticiones: "avanza tres veces")
+  }),
+
+  /**
+   * Modo IA (gestos con la mano, MediaPipe en el navegador).
+   * La librería se descarga de jsDelivr con versión fija (si cambia, revisa
+   * la CSP de index.html) y el modelo se sirve desde este mismo sitio.
+   * Se cargan SOLO al activar el modo IA.
+   */
+  ia: Object.freeze({
+    libreria: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs",
+    wasm: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm",
+    modelo: "assets/modelos/gesture_recognizer.task",
+    fps: 15,                     // cuadros analizados por segundo (cuida batería y temperatura)
+    /** Gestos que se SOSTIENEN para alternar un accesorio: forma → {código, ms}. */
+    accesorios: Object.freeze({
+      Thumb_Up: Object.freeze({ codigo: 10, ms: 1000 }),       // 👍 luz
+      ILoveYou: Object.freeze({ codigo: 11, ms: 1000 }),       // 🤟 sonido
+      Pointing_Up: Object.freeze({ codigo: 12, ms: 2000 }),    // ☝️ encender/apagar (más tiempo: es crítico)
+    }),
   }),
 
   /**

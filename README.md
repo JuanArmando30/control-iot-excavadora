@@ -4,7 +4,7 @@ Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, s
 
 | Sección | Archivo | Qué hace | ¿Clave? |
 |---|---|---|---|
-| **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido, **Demo** y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 4 modos de manejo (Pulso, Joystick, Voz, Giroscopio) | Operador |
+| **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido, **Demo** y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 5 modos de manejo (Pulso, Joystick, Voz, Giroscopio e IA con gestos de la mano) | Operador |
 | **Monitoreo** | `monitoreo.html` | Conectividad, estado registrado, DEMO (seleccionar, iniciar, cancelar, avance), historial, catálogo y eventos WSS | Consultar: no · DEMO: Operador |
 | **Administración / Configuración** | `administracion.html` | Vehículos, comandos, DEMO y sus pasos (endpoints existentes); configuración y clave | Operador (eliminar: Admin) |
 
@@ -57,13 +57,14 @@ control-vehiculo-iot/
 ├── assets/
 │   ├── css/app.css            Estilos propios (Mobile First) sobre Bootstrap
 │   ├── icons/                 favicon.ico, favicon-32, apple-touch-icon, icon-192/512, icon-maskable-512, sprite.svg
+│   ├── modelos/               gesture_recognizer.task (modelo de MediaPipe para el modo IA, ~8 MB, Apache 2.0)
 │   ├── site.webmanifest
 │   └── js/
 │       ├── config.js              URL base, WSS, rutas, vehículo, tiempos, mandos, interruptores, acceso de prueba
 │       ├── core/                  http-client · ws-client · validadores · clave-store
 │       ├── api/vehiculo-api.js    Una función por endpoint real
-│       ├── domain/                catalogo · comando-service · demo-service · demo-preferida · conectividad-service · interprete-voz
-│       ├── ui/                    dom · joystick · giroscopio · botonera · voz · carga · demo-panel · conectividad-panel · modales · clave-dialog
+│       ├── domain/                catalogo · comando-service · demo-service · demo-preferida · conectividad-service · interprete-voz · interprete-gestos
+│       ├── ui/                    dom · joystick · giroscopio · gestos · botonera · voz · carga · demo-visor · demo-panel · conectividad-panel · modales · clave-dialog
 │       └── pages/                 comun · control · monitoreo · administracion
 └── docs/
     ├── PRUEBAS.md             Casos de prueba paso a paso
@@ -101,12 +102,13 @@ Todo está en `assets/js/config.js`. Si cambias el dominio, actualiza también `
 - `etiquetasCortas` e `iconos`: texto corto e icono por código, solo estéticos; el nombre del catálogo sigue en `title` y `aria-label`.
 - DETENER se identifica por **nombre** (`DETENER`), igual que el backend.
 - Teclado: flechas o `WASD` = conducción · `I` `K` = subir/bajar brazo · `J` `L` = girar pala · `Espacio`/`Esc` = DETENER.
-- DEMO desde Control: botón «Demo» en la fila central (visible en los 4 modos). Abre un panel para elegir la DEMO (con número de pasos y duración) e iniciarla; mientras corre muestra el avance y tocarlo de nuevo la cancela. Crear o editar DEMO se hace en Administración (enlace «Crear o editar» del panel → `administracion.html#demo`). La última elegida queda preseleccionada (`domain/demo-preferida.js`, en este navegador) y es la que inicia la voz con «inicia la demo».
-- Visualización de la DEMO (`ui/demo-visor.js`): cada `demo_movimiento` del WSS se reproduce en el mando del modo abierto (botón de la cruceta, perilla del joystick, teléfono de Giro o tarjeta en Voz) durante su `duracion_ms`; el resto del mando queda atenuado y solo brilla la acción en curso. Banda superior con paso y avance. Es solo visual: no envía órdenes.
+- DEMO desde Control: botón «Demo» en la fila central (visible en los 5 modos). Abre un panel para elegir la DEMO (con número de pasos y duración) e iniciarla; mientras corre muestra el avance y tocarlo de nuevo la cancela. Crear o editar DEMO se hace en Administración (enlace «Crear o editar» del panel → `administracion.html#demo`). La última elegida queda preseleccionada (`domain/demo-preferida.js`, en este navegador) y es la que inicia la voz con «inicia la demo».
+- Visualización de la DEMO (`ui/demo-visor.js`): cada `demo_movimiento` del WSS se reproduce en el mando del modo abierto (botón de la cruceta, perilla del joystick, teléfono de Giro, tarjeta en Voz o gesto de la guía y flecha sobre la cámara en IA) durante su `duracion_ms`; el resto del mando queda atenuado y solo brilla la acción en curso. Banda superior con paso y avance. Es solo visual: no envía órdenes.
 - Accesorios interruptor (`interruptores`): Luz, Sonido y On/Off alternan su estado; el botón queda «prendido» (ámbar sólido, luz piloto y «Luz ON») hasta que se vuelve a tocar, y aparece un aviso centrado («Luz encendida», «Luz apagada»…). El cliente WSS ignora copias exactas de un mismo evento (mismo timestamp) para no alternar dos veces. El estado sale de los movimientos que difunde el servidor por WSS (también los de otros clientes y de la DEMO) y se recuerda en el navegador; no hay confirmación física del ESP.
 - DETENER único: si un movimiento enviado antes del paro se confirma después, se comprueba con el WSS (orden real del servidor) y solo se reafirma DETENER si hace falta. Sin WSS se reafirma por seguridad.
 - Pantalla de carga (`ui/carga.js` + CSS): animación de ~3.5 s al entrar al sitio o recargar, y versión corta (~1.8 s) con el nombre de la sección al navegar entre secciones. Se oculta sola por CSS (no depende de JavaScript).
 - Giroscopio (`ui/giroscopio.js`), modo aislado con sus propios paneles: inclinar el teléfono conduce (adelante, atrás, izquierda, derecha) con el mismo envío sostenido del joystick y origen `WEB_GIROSCOPIO`; brazo, pala y accesorios quedan en botones. Necesita HTTPS; en iPhone pide permiso de movimiento al tocar «Activar». Se detiene al nivelar, al voltear el teléfono, si el sensor deja de enviar datos, al ocultar la página o con DETENER (que además lo pausa).
+- Modo IA (`ui/gestos.js` + `domain/interprete-gestos.js`), aislado como Giro, para teléfonos, tabletas y computadoras con cámara: MediaPipe Gesture Recognizer corre **en el navegador** (el video no se graba ni se envía). «Joystick en el aire»: ✊ puño y mover la mano conduce, ✌️ victoria y mover la mano mueve brazo (↑ ↓) y pala (← →); el centro es donde se cierra la mano y la distancia se mide en tamaños de mano. 👍 sostenido 1 s = Luz, 🤟 1 s = Sonido, ☝️ 2 s = Encender/Apagar (con anillo de progreso; para repetir hay que abrir la mano). ✋ mano abierta, mano fuera de cuadro (~0.3 s), confianza baja, cámara congelada, pestaña oculta o ventana sin foco = DETENER. Tras DETENER no vuelve a mover hasta que se abra la mano. Mismo envío sostenido del joystick, origen `WEB_IA`. `ia: {libreria, wasm, modelo, fps, accesorios}` en `config.js`: la librería (`@mediapipe/tasks-vision@0.10.35`, ~11 MB de WebAssembly desde jsDelivr) y el modelo (`assets/modelos/`) se descargan solo al tocar «Activar cámara». Necesita HTTPS y permiso de cámara. La CSP de `index.html` incluye `'wasm-unsafe-eval'`, `connect-src 'self' https://cdn.jsdelivr.net` y `media-src blob: mediastream:` por este modo.
 - Voz: `interprete-voz.js` entiende lenguaje natural sin IA ni servicios externos (vocabulario amplio, palabras parecidas, frases encadenadas con «y luego», repeticiones, correcciones). `voz: {pasoMs, maxPasos}` controla la pausa entre órdenes encadenadas y el tope por frase. Las palabras de paro se comparan exactas y siempre ganan.
 - En modo Joystick solo se sostiene **un** joystick a la vez (una orden en vuelo); mientras tanto el otro joystick y los botones centrales no responden.
 - `mantenerMs: 2400`: con el joystick sostenido se repite la **misma** orden cada 2.4 s (pensado para el firmware que se detiene a los ~3 s sin órdenes). `0` = solo en cada cambio de dirección.

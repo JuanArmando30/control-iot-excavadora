@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'; connect-src https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; media-src 'self' blob: mediastream:; font-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Control remoto de la excavadora IoT: mando de conducción, mando de brazo y pala, giroscopio, luz, sonido, encendido, voz y DETENER.">
+  <meta name="description" content="Control remoto de la excavadora IoT: mando de conducción, mando de brazo y pala, giroscopio, gestos con la mano (IA), luz, sonido, encendido, voz y DETENER.">
   <meta name="theme-color" content="#060d24">
   <title>Control · Excavadora IoT</title>
   <link rel="icon" href="assets/icons/favicon.ico" sizes="16x16 32x32 48x48">
@@ -69,6 +69,8 @@
           <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-mic"/></svg><span>Voz</span></button>
         <button type="button" data-modo="giro" aria-pressed="false" aria-label="Modo Giroscopio" title="Giroscopio">
           <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-tilt"/></svg><span>Giro</span></button>
+        <button type="button" data-modo="ia" aria-pressed="false" aria-label="Modo IA: gestos con la mano" title="IA (gestos con la mano)">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-hand"/></svg><span>IA</span></button>
       </div>
 
       <div id="aviso" class="aviso aviso-linea" role="status" hidden></div>
@@ -112,6 +114,35 @@
         </div>
       </div>
 
+      <!-- Modo IA: cámara con la mano dibujada encima + guía de gestos -->
+      <div class="pad pad-izq pad-ia" role="group" aria-labelledby="tPadIA" data-vista="ia" hidden>
+        <h3 id="tPadIA" class="pad-titulo">Gestos con la mano · IA</h3>
+        <div class="ia">
+          <div class="ia-zona">
+            <div id="iaEscena" class="ia-escena deshabilitado">
+              <video id="iaVideo" class="ia-espejo" playsinline muted aria-hidden="true"></video>
+              <canvas id="iaLienzo" class="ia-espejo" aria-hidden="true"></canvas>
+              <div class="ia-reposo" aria-hidden="true">
+                <svg class="ico"><use href="assets/icons/sprite.svg#i-hand"/></svg>
+                <span>La cámara se usa solo en este dispositivo: no se graba ni se envía.</span>
+              </div>
+              <span class="ia-flecha dir-arriba" data-dir="arriba" data-codigo="1" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-up"/></svg></span>
+              <span class="ia-flecha dir-abajo" data-dir="abajo" data-codigo="2" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-down"/></svg></span>
+              <span class="ia-flecha dir-izquierda" data-dir="izquierda" data-codigo="3" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-left"/></svg></span>
+              <span class="ia-flecha dir-derecha" data-dir="derecha" data-codigo="4" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-right"/></svg></span>
+              <span id="iaEtiqueta" class="ia-etiqueta" aria-live="polite" hidden></span>
+              <span class="ia-anillo" aria-hidden="true"></span>
+              <span id="iaCarga" class="ia-carga" role="status" hidden></span>
+            </div>
+          </div>
+          <div class="giro-acciones">
+            <button id="btnIA" class="btn-giro" type="button" aria-pressed="false" aria-describedby="iaEstado">
+              <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-play"/></svg><span>Activar cámara</span></button>
+          </div>
+          <p id="iaEstado" class="giro-estado" aria-live="polite">Toca «Activar cámara» y pon la mano frente a ella.</p>
+        </div>
+      </div>
+
       <div class="pad-centro">
         <div class="fila-centro">
           <div id="secundarios" class="secundarios" role="group" aria-label="Luz, sonido y encendido"></div>
@@ -147,6 +178,54 @@
         <h3 id="tPadGiroBrazo" class="pad-titulo">Brazo y pala</h3>
         <div class="pad-zona">
           <div id="botonesGiro" class="botones-brazo" data-mando="brazo"></div>
+        </div>
+      </div>
+
+      <div class="pad pad-der pad-ia-guia" role="group" aria-labelledby="tPadGuia" data-vista="ia" hidden>
+        <h3 id="tPadGuia" class="pad-titulo">Gestos</h3>
+        <div id="guiaIA" class="ia-guia">
+          <div class="ia-fila" data-forma="Closed_Fist">
+            <span class="ia-emo" aria-hidden="true">✊</span><span class="ia-nom">Conducir<small>Puño y mueve la mano</small></span>
+            <span class="ia-chips">
+              <span class="ia-chip" data-mando="conduccion" data-dir="arriba" data-codigo="1" title="Avanzar"><svg class="ico"><use href="assets/icons/sprite.svg#i-up"/></svg></span>
+              <span class="ia-chip" data-mando="conduccion" data-dir="abajo" data-codigo="2" title="Retroceder"><svg class="ico"><use href="assets/icons/sprite.svg#i-down"/></svg></span>
+              <span class="ia-chip" data-mando="conduccion" data-dir="izquierda" data-codigo="3" title="Girar a la izquierda"><svg class="ico"><use href="assets/icons/sprite.svg#i-left"/></svg></span>
+              <span class="ia-chip" data-mando="conduccion" data-dir="derecha" data-codigo="4" title="Girar a la derecha"><svg class="ico"><use href="assets/icons/sprite.svg#i-right"/></svg></span>
+            </span>
+          </div>
+          <div class="ia-fila" data-forma="Victory">
+            <span class="ia-emo" aria-hidden="true">✌️</span><span class="ia-nom">Brazo y pala<small>Victoria y mueve la mano</small></span>
+            <span class="ia-chips">
+              <span class="ia-chip" data-mando="brazo" data-dir="arriba" data-codigo="5" title="Subir brazo"><svg class="ico"><use href="assets/icons/sprite.svg#i-chev-up"/></svg></span>
+              <span class="ia-chip" data-mando="brazo" data-dir="abajo" data-codigo="6" title="Bajar brazo"><svg class="ico"><use href="assets/icons/sprite.svg#i-chev-down"/></svg></span>
+              <span class="ia-chip" data-mando="brazo" data-dir="izquierda" data-codigo="7" title="Pala a la izquierda"><svg class="ico"><use href="assets/icons/sprite.svg#i-rot-l"/></svg></span>
+              <span class="ia-chip" data-mando="brazo" data-dir="derecha" data-codigo="8" title="Pala a la derecha"><svg class="ico"><use href="assets/icons/sprite.svg#i-rot-r"/></svg></span>
+            </span>
+          </div>
+          <div class="ia-fila" data-forma="Thumb_Up">
+            <span class="ia-emo" aria-hidden="true">👍</span><span class="ia-nom">Luz<small>Sostén 1 s</small></span>
+            <span class="ia-chips">
+              <span class="ia-chip" data-codigo="10" title="Luz"><svg class="ico"><use href="assets/icons/sprite.svg#i-bulb"/></svg></span>
+            </span>
+          </div>
+          <div class="ia-fila" data-forma="ILoveYou">
+            <span class="ia-emo" aria-hidden="true">🤟</span><span class="ia-nom">Sonido<small>Sostén 1 s</small></span>
+            <span class="ia-chips">
+              <span class="ia-chip" data-codigo="11" title="Sonido"><svg class="ico"><use href="assets/icons/sprite.svg#i-sound"/></svg></span>
+            </span>
+          </div>
+          <div class="ia-fila" data-forma="Pointing_Up">
+            <span class="ia-emo" aria-hidden="true">☝️</span><span class="ia-nom">On / Off<small>Sostén 2 s</small></span>
+            <span class="ia-chips">
+              <span class="ia-chip" data-codigo="12" title="Encender o apagar"><svg class="ico"><use href="assets/icons/sprite.svg#i-power"/></svg></span>
+            </span>
+          </div>
+          <div class="ia-fila ia-fila-paro" data-forma="Open_Palm">
+            <span class="ia-emo" aria-hidden="true">✋</span><span class="ia-nom">DETENER<small>Mano abierta</small></span>
+            <span class="ia-chips">
+              <span class="ia-chip ia-chip-paro" data-paro title="DETENER"><svg class="ico"><use href="assets/icons/sprite.svg#i-stop"/></svg></span>
+            </span>
+          </div>
         </div>
       </div>
 

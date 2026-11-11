@@ -62,6 +62,27 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 | G11 | «Centrar» con el teléfono en otra postura | La nueva postura pasa a ser la neutral |
 | G12 | En una PC sin sensor, toca «Activar» | «No llegan datos del sensor…»; no se envía nada |
 
+## IA · Gestos con la mano (modo IA; teléfono, tableta o PC con cámara, por HTTPS)
+
+| # | Pasos | Resultado esperado |
+|---|---|---|
+| IA0 | Cambia entre los 5 modos | IA tiene paneles propios (cámara + guía de gestos); no aparecen en los otros modos |
+| IA1 | Toca «Activar cámara» y acepta el permiso | La primera vez «Descargando la IA…» (~20 MB); luego se ve la cámara en espejo. Nada se envía |
+| IA2 | Muestra la mano abierta ✋ | El esqueleto de la mano aparece dibujado; estado «Listo: ✊ conduce…» |
+| IA3 | Cierra el puño ✊ al centro y súbelo ~1 mano | AVANZAR (origen `WEB_IA`); flecha superior y chip ↑ iluminados, borde cian; reenvío cada 2.4 s mientras sigas arriba |
+| IA4 | Con el puño: abajo / derecha / izquierda (tu derecha, como en un espejo) | RETROCEDER / GIRAR_DERECHA / GIRAR_IZQUIERDA (un `POST` por cambio) |
+| IA5 | Regresa el puño al centro, o abre la mano | DETENER |
+| IA6 | ✌️ victoria al centro y mueve ↑ ↓ ← → | SUBIR_BRAZO / BAJAR_BRAZO / GIRAR_PALA_IZQUIERDA / GIRAR_PALA_DERECHA; borde ámbar |
+| IA7 | Puño avanzando y cambia a victoria | Primero DETENER y luego el comando del brazo (nunca dos mandos a la vez) |
+| IA8 | 👍 sostenido ~1 s (anillo ámbar se llena) | LUZ una sola vez aunque lo sostengas más; para repetir abre la mano y vuelve a hacerlo |
+| IA9 | 🤟 ~1 s / ☝️ ~2 s | SONIDO / ENCENDER_APAGAR; ☝️ soltado antes de 2 s no hace nada |
+| IA10 | Con el puño moviendo, saca la mano de cuadro | DETENER en ~0.3 s |
+| IA11 | Con el puño moviendo, toca DETENER | DETENER; «abre la mano para volver a empezar»: con el puño cerrado no vuelve a moverse |
+| IA12 | Con el puño moviendo, cambia de pestaña / minimiza / cambia de ventana | DETENER (pestaña oculta pausa la cámara) |
+| IA13 | «Pausar cámara» o cambia de modo | La cámara se apaga (se apaga el indicador del navegador) |
+| IA14 | Niega el permiso de cámara | Mensaje «Permiso de cámara denegado…»; nada se envía |
+| IA15 | 👎 u otra forma | No hace nada |
+
 ## V · Voz (modo Voz; también sirve escribir la frase en «…o escribe una orden»)
 
 | # | Frase | Resultado esperado |
@@ -83,7 +104,7 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 
 ## M · DEMO
 
-**Desde Control (botón «Demo» de la fila central, en los 4 modos):**
+**Desde Control (botón «Demo» de la fila central, en los 5 modos):**
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
@@ -94,7 +115,7 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 | MC5 | En el panel toca «Crear o editar» | Abre Administración directamente en la pestaña DEMO |
 | MC6 | Di (o escribe) «inicia la demo» en modo Voz | Inicia la última DEMO elegida (o la primera activa) |
 | MC7 | Sin clave o sin WSS | Botón deshabilitado |
-| MC9 | Inicia una DEMO y recorre los 4 modos mientras corre | El mando queda atenuado y **solo brilla lo que hace cada paso**, durante lo que dura: Pulso = el botón de la cruceta (o de brazo/pala, o el accesorio); Joystick = la perilla se desplaza hacia la dirección; Giro = el teléfono dibujado se inclina y se ilumina la etiqueta (brazo/pala: la botonera 2×2); Voz = tarjeta «Paso n de N · acción». DETENER de la DEMO hace destellar el botón DETENER. La banda superior muestra «DEMO «…» · paso n/N · acción» con barra de avance. Al terminar todo vuelve a la normalidad |
+| MC9 | Inicia una DEMO y recorre los 5 modos mientras corre | El mando queda atenuado y **solo brilla lo que hace cada paso**, durante lo que dura: Pulso = el botón de la cruceta (o de brazo/pala, o el accesorio); Joystick = la perilla se desplaza hacia la dirección; Giro = el teléfono dibujado se inclina y se ilumina la etiqueta (brazo/pala: la botonera 2×2); Voz = tarjeta «Paso n de N · acción»; IA = fila del gesto y su dirección en la guía, y la flecha sobre la cámara al conducir. DETENER de la DEMO hace destellar el botón DETENER. La banda superior muestra «DEMO «…» · paso n/N · acción» con barra de avance. Al terminar todo vuelve a la normalidad |
 | MC8 | Teléfono horizontal estrecho (p. ej. 640×360) | Si Luz · Sonido · On/Off · Demo no caben en una fila, Demo pasa abajo **centrada** |
 
 **Desde Monitoreo:**

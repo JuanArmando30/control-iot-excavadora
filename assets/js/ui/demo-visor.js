@@ -9,6 +9,7 @@
  *  - Giro:      el teléfono dibujado se inclina y se ilumina la etiqueta;
  *               los pasos de brazo/pala brillan en la botonera 2×2.
  *  - Voz:       una tarjeta grande con icono, acción y número de paso.
+ *  - IA:        brilla el gesto de la guía y, al conducir, la flecha sobre la cámara.
  *  - Luz, sonido, On/Off: brilla su botón. DETENER: destella el botón DETENER.
  * El resto del mando sigue atenuado (bloqueado). Es solo visual: no envía nada.
  */
@@ -30,10 +31,11 @@ export class DemoVisor {
    * @param {{botonera: import("./botonera.js").Botonera,
    *          joysticks: Object<string, {base: HTMLElement, perilla: HTMLElement}>,
    *          nivel: HTMLElement, tarjeta: HTMLElement, stop: HTMLElement,
+   *          marcas?: HTMLElement[] (contenedores con elementos [data-codigo] que también brillan),
    *          obtenerCatalogo: () => import("../domain/catalogo.js").Catalogo}} op
    */
-  constructor({ botonera, joysticks, nivel, tarjeta, stop, obtenerCatalogo }) {
-    Object.assign(this, { botonera, joysticks, nivel, tarjeta, stop, obtenerCatalogo });
+  constructor({ botonera, joysticks, nivel, tarjeta, stop, marcas = [], obtenerCatalogo }) {
+    Object.assign(this, { botonera, joysticks, nivel, tarjeta, stop, marcas, obtenerCatalogo });
     this.timer = null;
     this.activos = [];
   }
@@ -56,6 +58,13 @@ export class DemoVisor {
 
     // Botones con ese código (crucetas de Pulso, botonera 2×2 de Giro, accesorios).
     for (const b of this.botonera.botones.get(codigo) || []) this._encender(b);
+    for (const m of this.marcas) {
+      m.querySelectorAll(esParo ? "[data-paro]" : `[data-codigo="${codigo}"]`).forEach((n) => {
+        this._encender(n);
+        const fila = n.closest(".ia-fila");
+        if (fila) this._encender(fila);
+      });
+    }
 
     if (d) {
       const [vx, vy] = VECTOR[d.dir];

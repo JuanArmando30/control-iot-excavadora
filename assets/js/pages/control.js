@@ -1,7 +1,8 @@
 /**
  * Página de CONTROL: mando horizontal con dos controles (conducción a la
  * izquierda, brazo y pala a la derecha), bloque central (luz, sonido,
- * encendido y DETENER), tres modos de manejo (Pulso, Joystick, Voz) y panel
+ * encendido y DETENER), cinco modos de manejo (Pulso, Joystick, Voz,
+ * Giroscopio e IA con gestos de la mano) y panel
  * de conectividad, todo en una sola pantalla.
  * Estado, DEMO y mensajes están en Monitoreo. La DEMO se sigue vigilando
  * aquí para bloquear el mando mientras corre y para que DETENER la cancele.
@@ -20,6 +21,7 @@ import { Joystick } from "../ui/joystick.js";
 import { ControlVoz, vozSoportada } from "../ui/voz.js";
 import { Giroscopio } from "../ui/giroscopio.js";
 import { DemoVisor } from "../ui/demo-visor.js";
+import { ControlGestos } from "../ui/gestos.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, toast, vibrar, avisoEstado } from "../ui/dom.js";
 import { abrirModal } from "../ui/modales.js";
@@ -27,12 +29,13 @@ import { iniciarConectividad, pintarVehiculo } from "./comun.js";
 
 const V = CONFIG.vehiculoId;
 const O = CONFIG.origen;
-const MODOS = ["pulso", "joystick", "voz", "giro"];
+const MODOS = ["pulso", "joystick", "voz", "giro", "ia"];
 const AYUDA = {
   pulso: "Pulso: cada toque envía una orden. Izquierda: conducción · derecha: brazo y pala.",
   joystick: "Joystick: arrastra una perilla (una a la vez); al soltar vuelve al centro y se envía DETENER.",
   voz: "Voz: habla con naturalidad; puedes encadenar órdenes con «y luego». Di «alto» para detener al instante.",
   giro: "Giroscopio: inclina el teléfono para conducir; el brazo, la pala y los accesorios van con botones (con el teléfono nivelado).",
+  ia: "IA: ✊ puño y mueve la mano para conducir, ✌️ victoria para brazo y pala, 👍 🤟 ☝️ sostenidos para luz, sonido y encendido. ✋ mano abierta = DETENER.",
 };
 const NOMBRE_MANDO = { conduccion: "Conducción", brazo: "Brazo y pala" };
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -87,6 +90,30 @@ $("btnGiro").addEventListener("click", () => {
 });
 $("btnCentrar").addEventListener("click", () => giroscopio.centrar());
 
+/** Modo IA: gestos con la mano frente a la cámara (MediaPipe, en el dispositivo). */
+const gestos = new ControlGestos({
+  escena: $("iaEscena"), video: $("iaVideo"), lienzo: $("iaLienzo"), etiqueta: $("iaEtiqueta"), carga: $("iaCarga"), guia: $("guiaIA"),
+}, {
+  onDireccion: (mando, dir) => alCambiarDireccion(mando, dir, O.ia),
+  onAccesorio: (codigo) => {
+    if (mantener.dir || !puedeMover()) return;        // una orden a la vez
+    vibrar(25);
+    enviar(codigo, O.ia);
+  },
+  onEstado: (txt, tipo = "") => { const p = $("iaEstado"); p.textContent = txt; p.dataset.tipo = tipo; },
+  onCambio: (on) => {
+    const b = $("btnIA");
+    b.setAttribute("aria-pressed", String(on));
+    b.querySelector("use").setAttribute("href", `assets/icons/sprite.svg#${on ? "i-pause" : "i-play"}`);
+    b.querySelector("span").textContent = on ? "Pausar cámara" : "Activar cámara";
+  },
+});
+$("btnIA").addEventListener("click", () => {
+  if (gestos.activo || gestos.cargando) { gestos.pausar(); return; }
+  if (!puedeMover()) { explicarBloqueo(); return; }
+  gestos.activar();                   // dentro del toque: el navegador pide permiso de cámara
+});
+
 /** Reproduce en el mando (en el modo que esté abierto) lo que hace la DEMO. */
 const demoVisor = new DemoVisor({
   botonera,
@@ -95,6 +122,7 @@ const demoVisor = new DemoVisor({
     brazo: { base: $("joystickBrazo"), perilla: $("joyPerillaBrazo") },
   },
   nivel: $("nivel"), tarjeta: $("demoPaso"), stop: $("btnStop"),
+  marcas: [$("guiaIA"), $("iaEscena")],          // modo IA: brillan la guía de gestos y las flechas de la cámara
   obtenerCatalogo: () => catalogo,
 });
 
@@ -133,6 +161,7 @@ async function detenerTodo(origen = O.boton) {
   cancelarSecuenciaVoz("cancelada con DETENER");
   for (const j of Object.values(joysticks)) j.soltar();
   giroscopio.pausar("Pausado por DETENER. Toca «Activar» para seguir.");
+  if (gestos.activo) { gestos.bloquear(); $("iaEstado").textContent = "DETENER: abre la mano ✋ para volver a empezar."; }
   if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
   if (demo.activa) {
     try {
@@ -180,7 +209,7 @@ function alCambiarDireccion(mando, dir, origen = O.joystick) {
   clearInterval(mantener.timer);
   mantener.timer = null;
   const cmd = dir ? catalogo.direccion(dir, mando) : null;
-  if (modo === "joystick" || modo === "giro") log(NOMBRE_MANDO[mando], cmd ? Catalogo.etiqueta(cmd) : "neutral");
+  if (modo === "joystick" || modo === "giro" || modo === "ia") log(NOMBRE_MANDO[mando], cmd ? Catalogo.etiqueta(cmd) : "neutral");
 
   if (!cmd) {
     if (mantener.dir) {                 // volvió al centro, se soltó, se niveló o se perdió el sensor
@@ -353,6 +382,7 @@ async function iniciarDemoElegida(d) {
   // Nada más debe estar moviendo el carrito cuando arranca la DEMO.
   for (const j of Object.values(joysticks)) j.soltar();
   giroscopio.pausar("Pausado: DEMO en ejecución.");
+  gestos.bloquear();
   cancelarSecuenciaVoz("cancelada: inicia una DEMO");
   try {
     const r = await demo.iniciar(d.id_demo);
@@ -545,6 +575,11 @@ function actualizarControles() {
   giroscopio.configurar(listo, new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, "conduccion"))));
   if (!listo && giroscopio.activo) giroscopio.pausar("Pausado: " + motivoBloqueo());
   $("btnGiro").disabled = !listo && !giroscopio.activo;
+  gestos.configurar(listo, {
+    conduccion: new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, "conduccion"))),
+    brazo: new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, "brazo"))),
+  }, (c) => catalogo.esActivo(c));
+  $("btnIA").disabled = !listo && !gestos.activo && !gestos.cargando;
   for (const [mando, j] of Object.entries(joysticks)) {
     j.pausado = !!mantener.mando && mantener.mando !== mando;     // un joystick sostenido a la vez
     j.configurar(listo, new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, mando))));
@@ -583,6 +618,7 @@ function setModo(nuevo) {
   if (!MODOS.includes(nuevo)) nuevo = "pulso";
   if (modo === "voz" && nuevo !== "voz") { voz.detener(); cancelarSecuenciaVoz("cancelada al cambiar de modo"); }
   if (nuevo !== "giro") giroscopio.pausar();
+  if (nuevo !== "ia") gestos.pausar();
   for (const j of Object.values(joysticks)) j.soltar();
   modo = nuevo;
   try { localStorage.setItem("vehiculoIot.modo", nuevo); } catch { /* */ }
@@ -635,6 +671,7 @@ document.addEventListener("keyup", (e) => {
 });
 window.addEventListener("blur", () => {
   presionadas.clear();
+  gestos.bloquear();                     // ventana sin foco: suelta y espera la mano abierta
   if (mantener.dir && !algunJoystickActivo()) alCambiarDireccion(mantener.mando, null);
 });
 
