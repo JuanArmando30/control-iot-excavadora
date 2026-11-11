@@ -4,7 +4,7 @@ Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, s
 
 | Sección | Archivo | Qué hace | ¿Clave? |
 |---|---|---|---|
-| **Control** | `index.html` | Una sola pantalla sin scroll: 3 modos de manejo (Pulso, Joystick, Voz), acciones del catálogo y DETENER | Operador |
+| **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 3 modos de manejo (Pulso, Joystick, Voz) | Operador |
 | **Monitoreo** | `monitoreo.html` | Conectividad, estado registrado, DEMO (seleccionar, iniciar, cancelar, avance), historial, catálogo y eventos WSS | Consultar: no · DEMO: Operador |
 | **Administración / Configuración** | `administracion.html` | Vehículos, comandos, DEMO y sus pasos (endpoints existentes); configuración y clave | Operador (eliminar: Admin) |
 
@@ -56,7 +56,7 @@ control-vehiculo-iot/
 ├── .nojekyll                  GitHub Pages sirve los archivos tal cual
 ├── assets/
 │   ├── css/app.css            Estilos propios (Mobile First) sobre Bootstrap
-│   ├── icons/                 favicon.svg/.ico, favicon-32, apple-touch-icon, icon-192/512, sprite.svg
+│   ├── icons/                 favicon.ico, favicon-32, apple-touch-icon, icon-192/512, icon-maskable-512, sprite.svg
 │   └── site.webmanifest
 ├── js/
 │   ├── config.js              URL base, WSS, rutas, vehículo, tiempos, mapeo de direcciones
@@ -95,8 +95,13 @@ Si Swagger cambia, solo se editan `js/config.js` (rutas) y `js/core/validadores.
 Todo está en `js/config.js`. Si cambias el dominio, actualiza también `connect-src` en la etiqueta `Content-Security-Policy` de los tres HTML.
 
 - `vehiculoId: 1`
-- `direcciones: {arriba: 1, abajo: 2, izquierda: 3, derecha: 4}`: códigos del catálogo para el joystick/cruceta. Una dirección solo se habilita si su código existe y está activo.
+- `direcciones: {arriba: 1, abajo: 2, izquierda: 3, derecha: 4}`: códigos del catálogo para el mando izquierdo (conducción). Una dirección solo se habilita si su código existe y está activo.
+- `brazo: {arriba: 5, abajo: 6, izquierda: 7, derecha: 8}`: códigos del mando derecho (subir/bajar brazo, girar pala izquierda/derecha), con la misma regla.
+- Cualquier otro comando activo del catálogo (hoy LUZ, SONIDO y ENCENDER_APAGAR) aparece como botón en el centro del mando.
+- `etiquetasCortas` e `iconos`: texto corto e icono por código, solo estéticos; el nombre del catálogo sigue en `title` y `aria-label`.
 - DETENER se identifica por **nombre** (`DETENER`), igual que el backend.
+- Teclado: flechas o `WASD` = conducción · `I` `K` = subir/bajar brazo · `J` `L` = girar pala · `Espacio`/`Esc` = DETENER.
+- En modo Joystick solo se sostiene **un** joystick a la vez (una orden en vuelo); mientras tanto el otro joystick y los botones centrales no responden.
 - `mantenerMs: 2400`: con el joystick sostenido se repite la **misma** orden cada 2.4 s (pensado para el firmware que se detiene a los ~3 s sin órdenes). `0` = solo en cada cambio de dirección.
 
 **Clave:** el operador la escribe en la página; se valida con `GET /sesion` y se guarda en `sessionStorage` (o `localStorage` si marca «Recordar»). Nunca está en el repositorio. Es adecuada para una práctica con usuarios de confianza; para producción conviene cambiarla por tokens de corta duración emitidos por un servicio de inicio de sesión.
@@ -144,7 +149,7 @@ Para que el REST funcione en local, agrega temporalmente `http://localhost:5500`
 1. Crea un repositorio, por ejemplo `control-vehiculo-iot`, y sube el **contenido** de esta carpeta a la raíz (incluido `.nojekyll`).
 2. *Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main` / `(root)` → Save*.
 3. Espera 1–2 minutos y abre `https://juanarmando30.github.io/control-vehiculo-iot/`.
-4. Verifica: pestaña del navegador con el **favicon** del joystick; **pie** «Desarrollado por Juan Armando Castillo Rodríguez · 2026» visible debajo del botón DETENER; consola sin errores; panel con los tres indicadores.
+4. Verifica: pestaña del navegador con el **favicon** de la excavadora; **pie** «Desarrollado por Juan Armando Castillo Rodríguez · 2026» visible debajo del mando; consola sin errores; panel con los tres indicadores.
 5. Aplica el parche CORS (sección 5) antes de probar comandos.
 
 Commits recomendados:
