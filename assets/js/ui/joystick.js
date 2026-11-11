@@ -70,8 +70,10 @@ export class Joystick {
     this.teclaActiva = null;
     this.geo = null;
     this.base.classList.remove("arrastrando");
-    this.perilla.style.transform = "";
-    if (habia) this._cambiar(null);
+    if (habia) {
+      this.perilla.style.transform = "";     // solo si alguien la movía (la DEMO también la anima)
+      this._cambiar(null);
+    }
   }
 
   _down(e) {

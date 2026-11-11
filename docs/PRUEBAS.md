@@ -94,6 +94,7 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 | MC5 | En el panel toca «Crear o editar» | Abre Administración directamente en la pestaña DEMO |
 | MC6 | Di (o escribe) «inicia la demo» en modo Voz | Inicia la última DEMO elegida (o la primera activa) |
 | MC7 | Sin clave o sin WSS | Botón deshabilitado |
+| MC9 | Inicia una DEMO y recorre los 4 modos mientras corre | El mando queda atenuado y **solo brilla lo que hace cada paso**, durante lo que dura: Pulso = el botón de la cruceta (o de brazo/pala, o el accesorio); Joystick = la perilla se desplaza hacia la dirección; Giro = el teléfono dibujado se inclina y se ilumina la etiqueta (brazo/pala: la botonera 2×2); Voz = tarjeta «Paso n de N · acción». DETENER de la DEMO hace destellar el botón DETENER. La banda superior muestra «DEMO «…» · paso n/N · acción» con barra de avance. Al terminar todo vuelve a la normalidad |
 | MC8 | Teléfono horizontal estrecho (p. ej. 640×360) | Si Luz · Sonido · On/Off · Demo no caben en una fila, Demo pasa abajo **centrada** |
 
 **Desde Monitoreo:**

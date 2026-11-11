@@ -19,6 +19,7 @@ import { Botonera } from "../ui/botonera.js";
 import { Joystick } from "../ui/joystick.js";
 import { ControlVoz, vozSoportada } from "../ui/voz.js";
 import { Giroscopio } from "../ui/giroscopio.js";
+import { DemoVisor } from "../ui/demo-visor.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, toast, vibrar, avisoEstado } from "../ui/dom.js";
 import { abrirModal } from "../ui/modales.js";
@@ -85,6 +86,17 @@ $("btnGiro").addEventListener("click", () => {
   giroscopio.activar();               // primera llamada dentro del toque: iOS exige gesto del usuario
 });
 $("btnCentrar").addEventListener("click", () => giroscopio.centrar());
+
+/** Reproduce en el mando (en el modo que esté abierto) lo que hace la DEMO. */
+const demoVisor = new DemoVisor({
+  botonera,
+  joysticks: {
+    conduccion: { base: $("joystick"), perilla: $("joyPerilla") },
+    brazo: { base: $("joystickBrazo"), perilla: $("joyPerillaBrazo") },
+  },
+  nivel: $("nivel"), tarjeta: $("demoPaso"), stop: $("btnStop"),
+  obtenerCatalogo: () => catalogo,
+});
 
 function soltarMantenido() {
   clearInterval(mantener.timer);
@@ -464,6 +476,9 @@ function alternarInterruptor(codigo, { avisar }) {
 }
 
 demo.addEventListener("cambio", (e) => {
+  mandoEl.classList.toggle("en-demo", e.detail.activa);       // mando atenuado: solo brilla lo que hace la DEMO
+  if (!e.detail.activa) demoVisor.fin();
+  else if (e.detail.evento === "demo_iniciada") demoVisor.inicio(e.detail.nombre, e.detail.total);
   pintarBotonDemo();
   if (e.detail.evento === "demo_iniciada") log("DEMO", `«${e.detail.nombre}» en ejecución`);
   if (e.detail.fin) log("DEMO", e.detail.fin);
@@ -491,7 +506,10 @@ ws.addEventListener("mensaje", (e) => {
   if ((ev.evento === "movimiento_individual" || ev.evento === "demo_movimiento") && CONFIG.interruptores[ev.codigo]) {
     alternarInterruptor(ev.codigo, { avisar: ev.evento === "movimiento_individual" });   // la DEMO no llena de avisos
   }
-  if (ev.evento === "movimiento_individual" || ev.evento === "demo_movimiento") botonera.marcarActivo(ev.codigo);
+  if (ev.evento === "movimiento_individual") botonera.marcarActivo(ev.codigo);
+  if (ev.evento === "demo_movimiento" && ev.codigo != null) {
+    demoVisor.paso({ codigo: ev.codigo, comando: ev.comando, orden: ev.datos.orden, total: ev.datos.total_movimientos, duracionMs: ev.datos.duracion_ms });
+  }
   if (ev.evento === "demo_movimiento") log("DEMO", `paso ${ev.datos.orden}/${ev.datos.total_movimientos}: ${ev.comando}`);
   if (ev.evento === "error" && !deDemo) toast(ev.datos.detalle || "La API informó un error.", "error");
 });
@@ -542,10 +560,15 @@ function actualizarControles() {
   let texto = "", tipo = "info";
   if (!tieneClave) texto = "Falta la clave de operador: pulsa «Sin clave».";
   else if (!catalogo.cargado) { texto = "No se pudo cargar el catálogo de comandos."; tipo = "error"; }
-  else if (est.activa) texto = `DEMO «${est.nombre || "en curso"}»${est.total ? ` (${est.orden}/${est.total})` : ""}: mando bloqueado. DETENER la cancela.`;
+  else if (est.activa) {
+    const accion = est.comando ? Catalogo.etiqueta({ nombre: est.comando }) : "iniciando…";
+    texto = `DEMO «${est.nombre || "en curso"}»${est.orden ? ` · paso ${est.orden}/${est.total}` : ""} · ${accion} · DETENER la cancela`;
+    tipo = "demo";
+  }
   else if (!wsAbierto) { texto = "Sin sesión WSS: mando bloqueado hasta reconectar. DETENER sigue activo."; tipo = "error"; }
   aviso.textContent = texto;
   aviso.className = `aviso aviso-linea aviso-${tipo}`;
+  aviso.style.setProperty("--avance", est.activa && est.total ? `${Math.round((est.orden / est.total) * 100)}%` : "0%");
   aviso.hidden = !texto;
 }
 
