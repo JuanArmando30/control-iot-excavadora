@@ -4,7 +4,7 @@ Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, s
 
 | Sección | Archivo | Qué hace | ¿Clave? |
 |---|---|---|---|
-| **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 3 modos de manejo (Pulso, Joystick, Voz) | Operador |
+| **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido, **Demo** y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 4 modos de manejo (Pulso, Joystick, Voz, Giroscopio) | Operador |
 | **Monitoreo** | `monitoreo.html` | Conectividad, estado registrado, DEMO (seleccionar, iniciar, cancelar, avance), historial, catálogo y eventos WSS | Consultar: no · DEMO: Operador |
 | **Administración / Configuración** | `administracion.html` | Vehículos, comandos, DEMO y sus pasos (endpoints existentes); configuración y clave | Operador (eliminar: Admin) |
 
@@ -63,7 +63,7 @@ control-vehiculo-iot/
 │   ├── core/                  http-client · ws-client · validadores · clave-store
 │   ├── api/vehiculo-api.js    Una función por endpoint real
 │   ├── domain/                catalogo · comando-service · demo-service · conectividad-service · interprete-voz
-│   ├── ui/                    dom · joystick · botonera · voz · demo-panel · conectividad-panel · modales · clave-dialog
+│   ├── ui/                    dom · joystick · giroscopio · botonera · voz · carga · demo-panel · conectividad-panel · modales · clave-dialog
 │   └── pages/                 comun · control · monitoreo · administracion
 └── docs/
     ├── PRUEBAS.md             Casos de prueba paso a paso
@@ -101,6 +101,9 @@ Todo está en `js/config.js`. Si cambias el dominio, actualiza también `connect
 - `etiquetasCortas` e `iconos`: texto corto e icono por código, solo estéticos; el nombre del catálogo sigue en `title` y `aria-label`.
 - DETENER se identifica por **nombre** (`DETENER`), igual que el backend.
 - Teclado: flechas o `WASD` = conducción · `I` `K` = subir/bajar brazo · `J` `L` = girar pala · `Espacio`/`Esc` = DETENER.
+- DEMO desde Control: botón «Demo» en la fila central (visible en los 4 modos), con doble toque para confirmar; muestra el avance y tocarlo de nuevo la cancela. Ejecuta la DEMO marcada «En Control» en Administración (`domain/demo-preferida.js`, guardada en este navegador porque el backend no tiene ese campo); si no hay elección, la primera activa. También por voz: «inicia la demo».
+- Pantalla de carga (`ui/carga.js` + CSS): animación de ~3.5 s al entrar al sitio o recargar, y versión corta (~1.8 s) con el nombre de la sección al navegar entre secciones. Se oculta sola por CSS (no depende de JavaScript).
+- Giroscopio (`ui/giroscopio.js`), modo aislado con sus propios paneles: inclinar el teléfono conduce (adelante, atrás, izquierda, derecha) con el mismo envío sostenido del joystick y origen `WEB_GIROSCOPIO`; brazo, pala y accesorios quedan en botones. Necesita HTTPS; en iPhone pide permiso de movimiento al tocar «Activar». Se detiene al nivelar, al voltear el teléfono, si el sensor deja de enviar datos, al ocultar la página o con DETENER (que además lo pausa).
 - Voz: `interprete-voz.js` entiende lenguaje natural sin IA ni servicios externos (vocabulario amplio, palabras parecidas, frases encadenadas con «y luego», repeticiones, correcciones). `voz: {pasoMs, maxPasos}` controla la pausa entre órdenes encadenadas y el tope por frase. Las palabras de paro se comparan exactas y siempre ganan.
 - En modo Joystick solo se sostiene **un** joystick a la vez (una orden en vuelo); mientras tanto el otro joystick y los botones centrales no responden.
 - `mantenerMs: 2400`: con el joystick sostenido se repite la **misma** orden cada 2.4 s (pensado para el firmware que se detiene a los ~3 s sin órdenes). `0` = solo en cada cambio de dirección.
