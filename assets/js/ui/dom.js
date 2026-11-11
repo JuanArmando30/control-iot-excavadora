@@ -74,6 +74,33 @@ export function toast(mensaje, tipo = "") {
   setTimeout(() => t.remove(), tipo === "error" ? 6500 : 3500);
 }
 
+let avisoEstadoActual = null;
+
+/**
+ * Aviso central de estado (luz, sonido, encendido): tarjeta en el centro de la
+ * pantalla con icono, estado y barra de tiempo. No bloquea los toques.
+ * @param {{icono:string, titulo:string, detalle?:string, encendido:boolean, ms?:number}} op
+ */
+export function avisoEstado({ icono: ic, titulo, detalle = "", encendido, ms = 3200 }) {
+  avisoEstadoActual?.remove();
+  const a = el("div", { class: `aviso-estado ${encendido ? "on" : "off"}`, attrs: { role: "status", "aria-live": "polite" } }, [
+    el("span", { class: "aviso-estado-ico" }, [icono(ic)]),
+    el("span", { class: "aviso-estado-txt" }, [
+      el("small", { text: encendido ? "Activado" : "Desactivado" }),
+      el("strong", { text: titulo }),
+      detalle ? el("span", { class: "aviso-estado-det", text: detalle }) : null,
+    ]),
+    el("span", { class: "aviso-estado-barra", attrs: { "aria-hidden": "true" } }),
+  ]);
+  a.style.setProperty("--ms", `${ms}ms`);
+  document.body.append(a);
+  avisoEstadoActual = a;
+  setTimeout(() => {
+    a.classList.add("saliendo");
+    setTimeout(() => { a.remove(); if (avisoEstadoActual === a) avisoEstadoActual = null; }, 300);
+  }, ms);
+}
+
 /** Lista de registro con límite de elementos (más reciente arriba). */
 export function registrar(lista, etiqueta, texto, max = 60) {
   if (!lista) return;

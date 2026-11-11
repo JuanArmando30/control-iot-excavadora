@@ -148,9 +148,11 @@ export class Botonera {
     for (const [codigo, txt] of Object.entries(CONFIG.interruptores)) {
       const on = !!this.interruptores[codigo];
       for (const b of this.botones.get(Number(codigo)) || []) {
+        const t = b.querySelector(".cbtn-txt");
+        if (!b.dataset.txtBase) b.dataset.txtBase = t.textContent;
+        t.textContent = on ? txt.botonOn : b.dataset.txtBase;     // «Luz» ↔ «Luz ON»
         b.classList.toggle("is-on", on);
         b.setAttribute("aria-pressed", String(on));
-        b.dataset.estado = on ? "ON" : "";
         b.title = `${b.title.split(" · Estado:")[0]} · Estado: ${on ? txt.on : txt.off}`;
       }
     }

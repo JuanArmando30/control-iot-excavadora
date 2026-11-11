@@ -82,7 +82,7 @@ export class WsClient extends EventTarget {
       if (ws !== this.ws) return;
       clearTimeout(this.timers.pong);              // cualquier mensaje demuestra que el canal vive
       const ev = eventoWs(m.data, this.idVehiculo);
-      if (ev) this.dispatchEvent(new CustomEvent("mensaje", { detail: ev }));
+      if (ev && !this._repetido(ev)) this.dispatchEvent(new CustomEvent("mensaje", { detail: ev }));
     };
 
     ws.onerror = () => {
@@ -104,6 +104,22 @@ export class WsClient extends EventTarget {
       this._estado(WS.ESPERANDO, `Código ${ev.code || "—"} · reintento en ${Math.ceil(espera / 1000)} s`);
       this.timers.reconexion = setTimeout(() => this._abrir(WS.RECONECTANDO), espera);
     };
+  }
+
+  /**
+   * Copia exacta de un evento ya recibido (mismo tipo, código y timestamp del
+   * servidor): se ignora para no contar dos veces un movimiento ni alternar dos
+   * veces un interruptor. Eventos distintos siempre traen timestamps distintos.
+   */
+  _repetido(ev) {
+    if (!ev.timestamp) return false;
+    const firma = `${ev.evento}|${ev.codigo ?? ""}|${ev.timestamp}|${ev.datos?.orden ?? ""}`;
+    const ahora = Date.now();
+    this.vistos ??= new Map();
+    for (const [k, t] of this.vistos) if (ahora - t > 10000) this.vistos.delete(k);
+    if (this.vistos.has(firma)) return true;
+    this.vistos.set(firma, ahora);
+    return false;
   }
 
   _ping() {

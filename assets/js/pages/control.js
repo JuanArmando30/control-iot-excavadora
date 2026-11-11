@@ -20,7 +20,7 @@ import { Joystick } from "../ui/joystick.js";
 import { ControlVoz, vozSoportada } from "../ui/voz.js";
 import { Giroscopio } from "../ui/giroscopio.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
-import { $, el, toast, vibrar } from "../ui/dom.js";
+import { $, el, toast, vibrar, avisoEstado } from "../ui/dom.js";
 import { abrirModal } from "../ui/modales.js";
 import { iniciarConectividad, pintarVehiculo } from "./comun.js";
 
@@ -443,9 +443,15 @@ function alternarInterruptor(codigo, { avisar }) {
   interruptores[codigo] = !interruptores[codigo];
   try { localStorage.setItem(LLAVE_INTERRUPTORES, JSON.stringify(interruptores)); } catch { /* */ }
   botonera.setInterruptor(codigo, interruptores[codigo]);
-  const mensaje = interruptores[codigo] ? txt.on : txt.off;
+  const on = interruptores[codigo];
+  const mensaje = on ? txt.on : txt.off;
   log(catalogo.porCodigo(codigo)?.nombre || "Accesorio", mensaje);
-  if (avisar) toast(mensaje, interruptores[codigo] ? "ok" : "info");
+  if (avisar) {
+    avisoEstado({
+      icono: CONFIG.iconos[codigo] || "i-bolt", titulo: mensaje, encendido: on,
+      detalle: on ? "El botón queda encendido; tócalo de nuevo para apagar." : "Toca el botón de nuevo para encender.",
+    });
+  }
 }
 
 demo.addEventListener("cambio", (e) => {

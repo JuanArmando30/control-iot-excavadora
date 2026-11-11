@@ -109,9 +109,9 @@ export const CONFIG = Object.freeze({
    * deduce de las órdenes que difunde el servidor por WSS (sin confirmación del ESP).
    */
   interruptores: Object.freeze({
-    10: Object.freeze({ on: "Luz encendida", off: "Luz apagada" }),
-    11: Object.freeze({ on: "Sonido activado", off: "Sonido desactivado" }),
-    12: Object.freeze({ on: "Excavadora encendida", off: "Excavadora apagada" }),
+    10: Object.freeze({ on: "Luz encendida", off: "Luz apagada", botonOn: "Luz ON" }),
+    11: Object.freeze({ on: "Sonido activado", off: "Sonido desactivado", botonOn: "Sonido ON" }),
+    12: Object.freeze({ on: "Excavadora encendida", off: "Excavadora apagada", botonOn: "Encendida" }),
   }),
 
   /**

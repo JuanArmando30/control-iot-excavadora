@@ -27,7 +27,7 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | B3c | Teclado en modo Pulso: `I`, `K`, `J`, `L` | SUBIR_BRAZO, BAJAR_BRAZO, GIRAR_PALA_IZQUIERDA, GIRAR_PALA_DERECHA (origen `WEB_TECLADO`) |
 | B4 | Mantén un joystick y toca un botón del centro (multitáctil) | Botones centrales deshabilitados mientras hay una dirección sostenida; DETENER sigue activo |
 | B5 | Quita la clave (Olvidar clave) con el acceso de prueba desactivado | Controles deshabilitados y aviso «Falta la clave» |
-| B6 | Toca Luz, luego Sonido, luego Luz | Aviso «Luz encendida», «Sonido activado», «Luz apagada»; cada botón queda en ámbar con «ON» mientras siga encendido y vuelve a normal al apagarse; el estado se conserva al recargar |
+| B6 | Toca Luz, luego Sonido, luego Luz | Aviso centrado (~3 s, con icono y barra de tiempo): «Luz encendida», «Sonido activado», «Luz apagada». Cada botón queda en ámbar sólido con luz piloto y texto «Luz ON» / «Sonido ON» / «Encendida» (en horizontal: icono + «ON») hasta que se vuelve a tocar; entonces vuelve a normal. El estado se conserva al recargar. En horizontal el aviso no tapa DETENER |
 | B7 | Acceso de prueba activo (`accesoLibre`) y navegador sin clave guardada | No pide clave; el botón superior dice «Acceso de prueba» y el control funciona |
 
 ## D · DETENER
