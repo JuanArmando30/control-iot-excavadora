@@ -57,20 +57,20 @@ control-vehiculo-iot/
 ├── assets/
 │   ├── css/app.css            Estilos propios (Mobile First) sobre Bootstrap
 │   ├── icons/                 favicon.ico, favicon-32, apple-touch-icon, icon-192/512, icon-maskable-512, sprite.svg
-│   └── site.webmanifest
-├── js/
-│   ├── config.js              URL base, WSS, rutas, vehículo, tiempos, mapeo de direcciones
-│   ├── core/                  http-client · ws-client · validadores · clave-store
-│   ├── api/vehiculo-api.js    Una función por endpoint real
-│   ├── domain/                catalogo · comando-service · demo-service · conectividad-service · interprete-voz
-│   ├── ui/                    dom · joystick · giroscopio · botonera · voz · carga · demo-panel · conectividad-panel · modales · clave-dialog
-│   └── pages/                 comun · control · monitoreo · administracion
+│   ├── site.webmanifest
+│   └── js/
+│       ├── config.js              URL base, WSS, rutas, vehículo, tiempos, mandos, interruptores, acceso de prueba
+│       ├── core/                  http-client · ws-client · validadores · clave-store
+│       ├── api/vehiculo-api.js    Una función por endpoint real
+│       ├── domain/                catalogo · comando-service · demo-service · demo-preferida · conectividad-service · interprete-voz
+│       ├── ui/                    dom · joystick · giroscopio · botonera · voz · carga · demo-panel · conectividad-panel · modales · clave-dialog
+│       └── pages/                 comun · control · monitoreo · administracion
 └── docs/
     ├── PRUEBAS.md             Casos de prueba paso a paso
     └── CHECKLIST.md           Seguridad, accesibilidad y errores
 ```
 
-Todas las rutas son **relativas** (`assets/...`, `js/...`), por eso funcionan en la subruta `https://juanarmando30.github.io/<repositorio>/`.
+Todas las rutas son **relativas** (`assets/...`, `assets/js/...`), por eso funcionan en la subruta `https://juanarmando30.github.io/<repositorio>/`.
 
 ## 3. Contrato de la API usado (validado contra el código del backend)
 
@@ -88,11 +88,11 @@ Todas las rutas son **relativas** (`assets/...`, `js/...`), por eso funcionan en
 
 Eventos WSS (formato común `{evento, id_vehiculo, comando, codigo, timestamp, datos}`): `estado_inicial`, `estado_actualizado`, `movimiento_individual`, `demo_iniciada`, `demo_movimiento`, `demo_finalizada`, `demo_cancelada`, `error`, `pong`.
 
-Si Swagger cambia, solo se editan `js/config.js` (rutas) y `js/core/validadores.js` (campos).
+Si Swagger cambia, solo se editan `assets/js/config.js` (rutas) y `assets/js/core/validadores.js` (campos).
 
 ## 4. Configuración (sin secretos)
 
-Todo está en `js/config.js`. Si cambias el dominio, actualiza también `connect-src` en la etiqueta `Content-Security-Policy` de los tres HTML.
+Todo está en `assets/js/config.js`. Si cambias el dominio, actualiza también `connect-src` en la etiqueta `Content-Security-Policy` de los tres HTML.
 
 - `vehiculoId: 1`
 - `direcciones: {arriba: 1, abajo: 2, izquierda: 3, derecha: 4}`: códigos del catálogo para el mando izquierdo (conducción). Una dirección solo se habilita si su código existe y está activo.
@@ -101,12 +101,16 @@ Todo está en `js/config.js`. Si cambias el dominio, actualiza también `connect
 - `etiquetasCortas` e `iconos`: texto corto e icono por código, solo estéticos; el nombre del catálogo sigue en `title` y `aria-label`.
 - DETENER se identifica por **nombre** (`DETENER`), igual que el backend.
 - Teclado: flechas o `WASD` = conducción · `I` `K` = subir/bajar brazo · `J` `L` = girar pala · `Espacio`/`Esc` = DETENER.
-- DEMO desde Control: botón «Demo» en la fila central (visible en los 4 modos), con doble toque para confirmar; muestra el avance y tocarlo de nuevo la cancela. Ejecuta la DEMO marcada «En Control» en Administración (`domain/demo-preferida.js`, guardada en este navegador porque el backend no tiene ese campo); si no hay elección, la primera activa. También por voz: «inicia la demo».
+- DEMO desde Control: botón «Demo» en la fila central (visible en los 4 modos). Abre un panel para elegir la DEMO (con número de pasos y duración) e iniciarla; mientras corre muestra el avance y tocarlo de nuevo la cancela. Crear o editar DEMO se hace en Administración (enlace «Crear o editar» del panel → `administracion.html#demo`). La última elegida queda preseleccionada (`domain/demo-preferida.js`, en este navegador) y es la que inicia la voz con «inicia la demo».
+- Accesorios interruptor (`interruptores`): Luz, Sonido y On/Off alternan su estado; el botón queda en ámbar con «ON» mientras sigan encendidos y aparece un aviso («Luz encendida», «Luz apagada»…). El estado sale de los movimientos que difunde el servidor por WSS (también los de otros clientes y de la DEMO) y se recuerda en el navegador; no hay confirmación física del ESP.
+- DETENER único: si un movimiento enviado antes del paro se confirma después, se comprueba con el WSS (orden real del servidor) y solo se reafirma DETENER si hace falta. Sin WSS se reafirma por seguridad.
 - Pantalla de carga (`ui/carga.js` + CSS): animación de ~3.5 s al entrar al sitio o recargar, y versión corta (~1.8 s) con el nombre de la sección al navegar entre secciones. Se oculta sola por CSS (no depende de JavaScript).
 - Giroscopio (`ui/giroscopio.js`), modo aislado con sus propios paneles: inclinar el teléfono conduce (adelante, atrás, izquierda, derecha) con el mismo envío sostenido del joystick y origen `WEB_GIROSCOPIO`; brazo, pala y accesorios quedan en botones. Necesita HTTPS; en iPhone pide permiso de movimiento al tocar «Activar». Se detiene al nivelar, al voltear el teléfono, si el sensor deja de enviar datos, al ocultar la página o con DETENER (que además lo pausa).
 - Voz: `interprete-voz.js` entiende lenguaje natural sin IA ni servicios externos (vocabulario amplio, palabras parecidas, frases encadenadas con «y luego», repeticiones, correcciones). `voz: {pasoMs, maxPasos}` controla la pausa entre órdenes encadenadas y el tope por frase. Las palabras de paro se comparan exactas y siempre ganan.
 - En modo Joystick solo se sostiene **un** joystick a la vez (una orden en vuelo); mientras tanto el otro joystick y los botones centrales no responden.
 - `mantenerMs: 2400`: con el joystick sostenido se repite la **misma** orden cada 2.4 s (pensado para el firmware que se detiene a los ~3 s sin órdenes). `0` = solo en cada cambio de dirección.
+
+**⚠ Acceso de prueba (temporal):** `accesoLibre: { activo: true, clave: "…" }` en `assets/js/config.js` hace que la página entre sin pedir clave y use esa. La clave queda **visible en el código publicado**: usa una clave de *operador* (no de administrador), compártela solo mientras duren las pruebas y **cámbiala en el backend al terminar**; luego pon `activo: false` y borra la clave del archivo.
 
 **Clave:** el operador la escribe en la página; se valida con `GET /sesion` y se guarda en `sessionStorage` (o `localStorage` si marca «Recordar»). Nunca está en el repositorio. Es adecuada para una práctica con usuarios de confianza; para producción conviene cambiarla por tokens de corta duración emitidos por un servicio de inicio de sesión.
 
