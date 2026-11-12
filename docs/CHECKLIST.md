@@ -5,7 +5,8 @@
 - [x] Una sola conexión WSS por navegador compartida entre pestañas (Web Locks + BroadcastChannel); solo se retransmiten eventos ya validados del mismo vehículo.
 - [x] Sin contraseñas, tokens, claves AWS ni datos de RDS en el repositorio; el navegador nunca habla con MySQL.
 - [x] `X-API-Key` escrita por el usuario, validada con `GET /sesion`, en `sessionStorage` por defecto.
-- [ ] **Pendiente al terminar las pruebas:** desactivar `accesoLibre` en `assets/js/config.js`, borrar la clave de prueba del archivo y cambiarla en el backend (mientras esté activo, la clave es pública).
+- [x] Sin claves en el código publicado. El control sin clave depende del servidor (`CONTROL_ABIERTO` en su `.env`) y solo abre mover, iniciar/cancelar DEMO y `GET /sesion`; crear/editar exigen clave de operador y eliminar la de admin; una clave incorrecta siempre da 401.
+- [ ] **Al terminar las pruebas:** `CONTROL_ABIERTO=false` en el servidor (`actualizar_servidor.ps1 -ControlAbierto no`).
 - [x] CORS del backend limitado al origen de GitHub Pages, métodos GET/POST y cabeceras `Content-Type`, `X-API-Key`, sin credenciales. CORS no se usa como autenticación.
 - [x] Content-Security-Policy: scripts solo propios y de jsDelivr (con SRI), `connect-src` limitado a la API, sin `unsafe-inline`. En Control además `'wasm-unsafe-eval'` y jsDelivr en `connect-src` para MediaPipe (modo IA, versión fija 0.10.35), y `media-src blob: mediastream:` para la cámara.
 - [x] Modo IA: el video se procesa solo en el dispositivo (no se graba ni se envía); la cámara se apaga al pausar, cambiar de modo u ocultar la pestaña. Dead-man: sin puño o victoria no hay movimiento.
