@@ -135,7 +135,7 @@ function soltarMantenido() {
 
 /* ------------------------- Envío de comandos ------------------------ */
 function puedeMover() {
-  return catalogo.cargado && !!claveStore.obtener() && !demo.activa && wsAbierto;
+  return catalogo.cargado && !!claveStore.puedeControlar() && !demo.activa && wsAbierto;
 }
 
 async function enviar(codigo, origen) {
@@ -162,7 +162,7 @@ async function detenerTodo(origen = O.boton) {
   for (const j of Object.values(joysticks)) j.soltar();
   giroscopio.pausar("Pausado por DETENER. Toca «Activar» para seguir.");
   if (gestos.activo) { gestos.bloquear(); $("iaEstado").textContent = "DETENER: abre la mano ✋ para volver a empezar."; }
-  if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
+  if (!claveStore.puedeControlar()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
   if (demo.activa) {
     try {
       await demo.cancelar();
@@ -186,7 +186,7 @@ comandos.addEventListener("paro", (e) => {
 comandos.addEventListener("fallo", (e) => {
   const err = e.detail.error;
   log("Error", err.message);
-  if (err.status === 401) { claveStore.olvidar(); abrirDialogoClave({ motivo: err.message }); }
+  if (err.status === 401) { perderAcceso(err.message); }
   else if (err.status === 409) demo.sincronizar().catch(() => {});
   else toast(err.message, "error");
 });
@@ -331,7 +331,7 @@ async function ejecutarSecuencia(pasos, plan, nota) {
 }
 
 $("btnMic").addEventListener("click", () => {
-  if (!claveStore.obtener()) { abrirDialogoClave(); return; }
+  if (!claveStore.puedeControlar()) { abrirDialogoClave(); return; }
   voz.alternar();
 });
 $("chkManosLibres").addEventListener("change", (e) => { voz.manosLibres = e.target.checked; });
@@ -365,7 +365,7 @@ async function cargarDemos() {
 
 function pintarBotonDemo() {
   const e = demo.estado;
-  const tieneClave = !!claveStore.obtener();
+  const tieneClave = !!claveStore.puedeControlar();
   btnDemo.classList.toggle("is-demo", e.activa);
   btnDemo.style.setProperty("--avance", e.activa && e.total ? `${Math.round((e.orden / e.total) * 100)}%` : "0%");
   btnDemo.querySelector("use").setAttribute("href", `assets/icons/sprite.svg#${e.activa ? "i-stop" : "i-play"}`);
@@ -392,7 +392,7 @@ async function iniciarDemoElegida(d) {
     return true;
   } catch (e) {
     log("Error", "DEMO: " + e.message);
-    if (e.status === 401) { claveStore.olvidar(); abrirDialogoClave({ motivo: e.message }); }
+    if (e.status === 401) { perderAcceso(e.message); }
     else toast("DEMO: " + e.message, "error");
     return false;
   } finally {
@@ -464,7 +464,7 @@ function abrirPanelDemo() {
 
 btnDemo.addEventListener("click", async () => {
   if (demo.activa) { await detenerTodo(O.boton); return; }
-  if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
+  if (!claveStore.puedeControlar()) { abrirDialogoClave({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
   abrirPanelDemo();
 });
 demoPreferida.alCambiar(V, pintarBotonDemo);
@@ -545,8 +545,19 @@ ws.addEventListener("mensaje", (e) => {
 });
 
 /* ---------------------------- Controles ----------------------------- */
+/** 401 de la API: la clave dejó de valer, o el servidor cerró el control abierto. */
+function perderAcceso(motivo) {
+  if (claveStore.esAbierto()) {
+    claveStore.fijarAbierto(false);
+    abrirDialogoClave({ motivo: "El servidor ya no permite controlar sin clave. Escribe la clave de operador." });
+    return;
+  }
+  claveStore.olvidar();
+  abrirDialogoClave({ motivo });
+}
+
 function motivoBloqueo() {
-  if (!claveStore.obtener()) return "falta la clave de operador.";
+  if (!claveStore.puedeControlar()) return "falta la clave de operador.";
   if (!catalogo.cargado) return "el catálogo de comandos no se pudo cargar.";
   if (demo.activa) return "hay una DEMO en ejecución.";
   if (!wsAbierto) return "la sesión WSS no está en línea.";
@@ -555,13 +566,13 @@ function motivoBloqueo() {
 
 function explicarBloqueo() {
   const m = motivoBloqueo();
-  if (!claveStore.obtener()) abrirDialogoClave({ motivo: "Escribe la clave de operador para controlar el vehículo." });
+  if (!claveStore.puedeControlar()) abrirDialogoClave({ motivo: "Escribe la clave de operador para controlar el vehículo." });
   else if (m) toast("Control bloqueado: " + m, "error");
 }
 
 function actualizarControles() {
   const listo = puedeMover();
-  const tieneClave = !!claveStore.obtener();
+  const tieneClave = !!claveStore.puedeControlar();
 
   // Si el control se bloquea con una dirección mantenida por teclado, se suelta y se detiene.
   if (!listo && mantener.dir && !algunJoystickActivo()) {
@@ -709,5 +720,5 @@ async function sincronizarDemo() {
   await inicializarClave();
   await Promise.all([pintarVehiculo(), cargarCatalogo(), sincronizarDemo(), cargarDemos()]);
   ws.conectar();
-  if (!claveStore.obtener()) abrirDialogoClave({ motivo: "Para mover el vehículo necesitas la clave de operador." });
+  if (!claveStore.puedeControlar()) abrirDialogoClave({ motivo: "Para mover el vehículo necesitas la clave de operador." });
 })();

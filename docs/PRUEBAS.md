@@ -26,9 +26,11 @@ Requisitos: parche CORS aplicado, clave de operador a la mano, página abierta e
 | B3b | Cruceta derecha: Subir, Bajar, Pala izq., Pala der. | `POST` con los códigos 5, 6, 7 y 8 (origen `WEB_PULSO`); si desactivas uno en Administración, su botón queda «No disponible» |
 | B3c | Teclado en modo Pulso: `I`, `K`, `J`, `L` | SUBIR_BRAZO, BAJAR_BRAZO, GIRAR_PALA_IZQUIERDA, GIRAR_PALA_DERECHA (origen `WEB_TECLADO`) |
 | B4 | Mantén un joystick y toca un botón del centro (multitáctil) | Botones centrales deshabilitados mientras hay una dirección sostenida; DETENER sigue activo |
-| B5 | Quita la clave (Olvidar clave) con el acceso de prueba desactivado | Controles deshabilitados y aviso «Falta la clave» |
+| B5 | Servidor con `CONTROL_ABIERTO=false` y navegador sin clave | Pide la clave; controles deshabilitados y aviso «Falta la clave» |
 | B6 | Toca Luz, luego Sonido, luego Luz | Aviso centrado (~3 s, con icono y barra de tiempo): «Luz encendida», «Sonido activado», «Luz apagada». Cada botón queda en ámbar sólido con luz piloto y texto «Luz ON» / «Sonido ON» / «Encendida» (en horizontal: icono + «ON») hasta que se vuelve a tocar; entonces vuelve a normal. El estado se conserva al recargar. En horizontal el aviso no tapa DETENER |
-| B7 | Acceso de prueba activo (`accesoLibre`) y navegador sin clave guardada | No pide clave; el botón superior dice «Acceso de prueba» y el control funciona |
+| B7 | Servidor con `CONTROL_ABIERTO=true`, **otro dispositivo** sin clave guardada | No pide clave; el botón superior dice «Control abierto»; mover y la DEMO funcionan (en el historial se ven sin clave) |
+| B8 | Igual que B7, en Administración intenta crear, editar o eliminar | Pide la clave de operador (crear/editar) o de admin (eliminar); sin ella la API responde 401 |
+| B9 | Con Control abierto en pantalla, cambia el servidor a `CONTROL_ABIERTO=false` y pulsa un movimiento | 401 → aparece el diálogo «El servidor ya no permite controlar sin clave» |
 
 ## D · DETENER
 

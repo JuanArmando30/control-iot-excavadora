@@ -52,7 +52,7 @@ export class ComandoService extends EventTarget {
     if (!cat.cargado) return "El catálogo de comandos aún no se ha cargado.";
     if (!Number.isInteger(codigo) || !cat.esActivo(codigo)) return "Ese comando no está disponible en el catálogo del vehículo.";
     if (this.demoActiva()) return "Hay una DEMO en ejecución. Usa DETENER para cancelarla.";
-    if (!claveStore.obtener()) return "Falta la clave de operador (Ajustes).";
+    if (!claveStore.puedeControlar()) return "Falta la clave de operador (Ajustes).";
     return null;
   }
 

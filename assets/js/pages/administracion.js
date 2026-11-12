@@ -248,7 +248,9 @@ function pintarClave() {
   const rol = claveStore.rol();
   $("estadoClave").textContent = claveStore.obtener()
     ? `Clave guardada en este navegador · rol: ${rol === "admin" ? "administrador (crear, actualizar y eliminar)" : rol === "operador" ? "operador (crear y actualizar; eliminar devolverá 403)" : "sin validar"}`
-    : "Sin clave: solo puedes consultar. Pulsa «Sin clave» para escribirla.";
+    : claveStore.esAbierto()
+      ? "Control abierto: mover y la DEMO no piden clave, pero crear, editar y eliminar sí. Pulsa «Control abierto» para escribir la clave."
+      : "Sin clave: solo puedes consultar. Pulsa «Sin clave» para escribirla.";
 }
 
 async function recargarTodo() {

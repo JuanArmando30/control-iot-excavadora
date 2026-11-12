@@ -169,7 +169,7 @@ export function salud(o) {
 export function sesion(o) {
   exigirObjeto(o, "sesión");
   if (o.rol !== "operador" && o.rol !== "admin") throw fallo("sesión");
-  return { rol: o.rol };
+  return { rol: o.rol, acceso: o.acceso === "abierto" ? "abierto" : "clave" };
 }
 
 /* ---------------------------- WebSocket ---------------------------- */

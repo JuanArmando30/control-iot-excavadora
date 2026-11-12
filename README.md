@@ -68,7 +68,7 @@ control-vehiculo-iot/
 │   ├── modelos/               gesture_recognizer.task (modelo de MediaPipe para el modo IA, ~8 MB, Apache 2.0)
 │   ├── site.webmanifest
 │   └── js/
-│       ├── config.js              URL base, WSS, rutas, vehículo, tiempos, mandos, interruptores, acceso de prueba
+│       ├── config.js              URL base, WSS, rutas, vehículo, tiempos, mandos, interruptores, control abierto
 │       ├── core/                  http-client · ws-client · ws-compartido · validadores · clave-store
 │       ├── api/vehiculo-api.js    Una función por endpoint real
 │       ├── domain/                catalogo · comando-service · demo-service · demo-preferida · conectividad-service · interprete-voz · interprete-gestos · monitoreo-estado
@@ -121,7 +121,7 @@ Todo está en `assets/js/config.js`. Si cambias el dominio, actualiza también `
 - En modo Joystick solo se sostiene **un** joystick a la vez (una orden en vuelo); mientras tanto el otro joystick y los botones centrales no responden.
 - `mantenerMs: 2400`: con el joystick sostenido se repite la **misma** orden cada 2.4 s (pensado para el firmware que se detiene a los ~3 s sin órdenes). `0` = solo en cada cambio de dirección.
 
-**⚠ Acceso de prueba (temporal):** `accesoLibre: { activo: true, clave: "…" }` en `assets/js/config.js` hace que la página entre sin pedir clave y use esa. La clave queda **visible en el código publicado**: usa una clave de *operador* (no de administrador), compártela solo mientras duren las pruebas y **cámbiala en el backend al terminar**; luego pon `activo: false` y borra la clave del archivo.
+**Control abierto (sin clave):** se activa en el **servidor** con `CONTROL_ABIERTO=true` en su `.env`. Con `controlAbierto: true` en `config.js`, cada página pregunta `GET /sesion` sin clave: si responde `{"acceso": "abierto"}`, Control mueve el vehículo e inicia/cancela DEMO sin pedir nada (botón superior «Control abierto»). **Crear, editar** (operador) y **eliminar** (admin) siguen pidiendo la clave en Administración. No hay ninguna clave en el código publicado. Para cerrarlo: `CONTROL_ABIERTO=false` en el servidor y reiniciar la API; la página vuelve a pedir la clave sola (si se cierra con la página abierta, la siguiente orden recibe 401 y aparece el diálogo).
 
 **Clave:** el operador la escribe en la página; se valida con `GET /sesion` y se guarda en `sessionStorage` (o `localStorage` si marca «Recordar»). Nunca está en el repositorio. Es adecuada para una práctica con usuarios de confianza; para producción conviene cambiarla por tokens de corta duración emitidos por un servicio de inicio de sesión.
 

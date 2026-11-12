@@ -1,15 +1,14 @@
 /**
- * Guarda la clave X-API-Key que escribe el operador.
- * - Por defecto en sessionStorage (se borra al cerrar la pestaña).
- * - En localStorage solo si el usuario marca "Recordar en este dispositivo".
- * La clave nunca forma parte del código publicado en GitHub Pages, SALVO que
- * se active el acceso de prueba temporal (CONFIG.accesoLibre): entonces, si el
- * operador no escribió una clave, se usa la de prueba sin pedir nada.
+ * Acceso a la API desde este navegador.
+ *
+ * - Clave X-API-Key escrita por el operador o el administrador: por defecto
+ *   en sessionStorage (se borra al cerrar la pestaña); en localStorage solo si
+ *   marca «Recordar en este dispositivo». Nunca forma parte del código publicado.
+ * - Control abierto: si el backend tiene CONTROL_ABIERTO=true, GET /sesion
+ *   sin clave responde {acceso:"abierto"} y este navegador puede CONTROLAR
+ *   (mover, DEMO) sin clave. No se guarda nada: se comprueba en cada carga.
+ *   Crear, editar y eliminar siguen necesitando una clave real.
  */
-import { CONFIG } from "../config.js";
-
-const CLAVE_LIBRE = CONFIG.accesoLibre?.activo ? String(CONFIG.accesoLibre.clave || "").trim() : "";
-
 const LLAVE = "vehiculoIot.claveApi";
 const LLAVE_ROL = "vehiculoIot.rol";
 // Valor seguro para una cabecera HTTP: ASCII visible, sin espacios.
@@ -24,15 +23,23 @@ function escribir(almacen, llave, valor) {
 
 let memoria = leer(sessionStorage, LLAVE) || leer(localStorage, LLAVE);
 let rol = leer(sessionStorage, LLAVE_ROL);
+let abierto = false;
 const oyentes = new Set();
+const avisar = () => oyentes.forEach((f) => f(memoria, rol));
 
 export const claveStore = {
-  obtener: () => memoria || CLAVE_LIBRE,
+  /** Clave real escrita por el usuario ("" si no hay). */
+  obtener: () => memoria,
   rol: () => rol,
-  /** true si se está usando la clave del acceso de prueba (no una escrita por el operador). */
-  esLibre: () => !memoria && !!CLAVE_LIBRE,
-  /** Rol validado para la clave de prueba (no se guarda la clave en el navegador). */
-  fijarRol(nuevo) { rol = nuevo; escribir(sessionStorage, LLAVE_ROL, nuevo); oyentes.forEach((f) => f(this.obtener(), rol)); },
+  /** ¿Puede mover el vehículo e iniciar/cancelar DEMO? (clave real o control abierto) */
+  puedeControlar: () => !!memoria || abierto,
+  /** true si controla SIN clave porque el backend tiene el control abierto. */
+  esAbierto: () => !memoria && abierto,
+  fijarAbierto(valor) {
+    if (abierto === !!valor) return;
+    abierto = !!valor;
+    avisar();
+  },
   recordada: () => !!leer(localStorage, LLAVE),
   formatoValido: (clave) => FORMATO.test(clave),
 
@@ -42,16 +49,16 @@ export const claveStore = {
     escribir(sessionStorage, LLAVE, clave);
     escribir(sessionStorage, LLAVE_ROL, rolValidado);
     escribir(localStorage, LLAVE, recordar ? clave : "");
-    oyentes.forEach((f) => f(memoria, rol));
+    avisar();
   },
 
   olvidar() {
-    memoria = "";             // con acceso de prueba activo se vuelve a usar la clave de prueba
+    memoria = "";             // si el control está abierto, se sigue pudiendo controlar sin clave
     rol = "";
     escribir(sessionStorage, LLAVE, "");
     escribir(sessionStorage, LLAVE_ROL, "");
     escribir(localStorage, LLAVE, "");
-    oyentes.forEach((f) => f(memoria, rol));
+    avisar();
   },
 
   alCambiar(f) { oyentes.add(f); return () => oyentes.delete(f); },

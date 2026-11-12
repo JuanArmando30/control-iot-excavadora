@@ -15,7 +15,7 @@ const RUTAS = Object.freeze({
   // Sistema
   salud: () => "/health",                         // sistema.py → {"estado":"ok"}
   saludDb: () => "/health/db",                    // sistema.py → {"estado":"ok"} | 503
-  sesion: () => "/sesion",                        // control.py → {"rol":"operador"|"admin"}
+  sesion: () => "/sesion",                        // control.py → {"rol":"operador"|"admin", "acceso":"clave"|"abierto"}
   // Vehículos
   vehiculos: () => "/vehiculos",
   vehiculo: (v) => `/vehiculos/${v}`,
@@ -137,15 +137,14 @@ export const CONFIG = Object.freeze({
   }),
 
   /**
-   * ⚠ TEMPORAL · ACCESO DE PRUEBA SIN PEDIR CLAVE.
-   * Con `activo: true` y una `clave`, la página entra directamente: nadie tiene
-   * que escribir la clave X-API-Key. ATENCIÓN: la clave queda VISIBLE en el
-   * código publicado en GitHub Pages; cualquiera que abra la página puede verla
-   * y mover el vehículo. Usa una clave de OPERADOR (no de administrador) y
-   * cámbiala en el backend al terminar las pruebas.
-   * Para volver a pedir la clave: `activo: false` (y borra la clave de aquí).
+   * Control sin clave. Con `true`, cada página pregunta al backend
+   * (GET /sesion SIN clave) si tiene CONTROL_ABIERTO=true; si es así, Control
+   * mueve el vehículo e inicia/cancela DEMO sin pedir la clave. Crear, editar
+   * y eliminar (Administración) siguen pidiendo la clave de operador o admin.
+   * No hay ninguna clave en este archivo: se abre o se cierra desde el `.env`
+   * del servidor. Con `false` la página siempre pide la clave.
    */
-  accesoLibre: Object.freeze({ activo: true, clave: "" }),
+  controlAbierto: true,
 
   /** El backend identifica el paro por nombre (comando_service.buscar_detener). */
   nombreDetener: "DETENER",

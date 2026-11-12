@@ -71,9 +71,9 @@ function crearSenal(timeoutMs, externa) {
 
 export class HttpClient {
   /**
-   * @param {{baseUrl: string, timeoutMs: number, obtenerClave: () => string}} opciones
+   * @param {{baseUrl: string, timeoutMs: number, obtenerClave: () => string, controlSinClave?: () => boolean}} opciones
    */
-  constructor({ baseUrl, timeoutMs, obtenerClave }) {
+  constructor({ baseUrl, timeoutMs, obtenerClave, controlSinClave }) {
     const base = new URL(baseUrl);
     if (base.protocol !== "https:" && location.protocol === "https:") {
       // Una página HTTPS no puede llamar a HTTP (mixed content).
@@ -82,11 +82,12 @@ export class HttpClient {
     this.base = base;
     this.timeoutMs = timeoutMs;
     this.obtenerClave = obtenerClave;
+    this.controlSinClave = controlSinClave;
   }
 
   /**
    * @param {string} ruta Ruta absoluta del backend, p. ej. "/vehiculos/1/comandos".
-   * @param {{method?: string, body?: object, auth?: boolean, signal?: AbortSignal, timeoutMs?: number}} op
+   * @param {{method?: string, body?: object, auth?: boolean|"control", signal?: AbortSignal, timeoutMs?: number}} op
    */
   async request(ruta, { method = "GET", body, auth = false, clave: claveExplicita, signal, timeoutMs } = {}) {
     if (!METODOS.has(method)) throw new ApiError("Método HTTP no permitido.", { tipo: "CLIENTE" });
@@ -101,8 +102,10 @@ export class HttpClient {
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (auth) {
       const clave = claveExplicita ?? this.obtenerClave();
-      if (!clave) throw new ApiError("Falta la clave de operador (X-API-Key).", { status: 401, tipo: "SIN_CLAVE" });
-      headers["X-API-Key"] = clave;
+      // auth "control": sin clave se permite si el backend tiene el control abierto (lo decide el backend).
+      const sinClaveValido = auth === "control" && this.controlSinClave?.();
+      if (!clave && !sinClaveValido) throw new ApiError("Falta la clave de operador (X-API-Key).", { status: 401, tipo: "SIN_CLAVE" });
+      if (clave) headers["X-API-Key"] = clave;
     }
 
     const senal = crearSenal(timeoutMs ?? this.timeoutMs, signal);

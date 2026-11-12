@@ -13,6 +13,7 @@ export const http = new HttpClient({
   baseUrl: CONFIG.apiBaseUrl,
   timeoutMs: CONFIG.tiempos.timeoutMs,
   obtenerClave: claveStore.obtener,
+  controlSinClave: claveStore.esAbierto,
 });
 
 const datos = (p) => p.then((r) => r.data);
@@ -27,6 +28,8 @@ export const api = {
   saludDb: (op) => http.get(R.saludDb(), op),
   /** Valida una clave (la guardada o una nueva antes de guardarla) sin modificar datos. */
   sesion: (clave) => datos(http.request(R.sesion(), { method: "GET", auth: true, clave })).then(V.sesion),
+  /** GET /sesion SIN clave: 200 {acceso:"abierto"} si el backend tiene CONTROL_ABIERTO=true; si no, 401. */
+  sesionSinClave: () => datos(http.request(R.sesion(), { method: "GET" })).then(V.sesion),
 
   /* ---------- Vehículos ---------- */
   vehiculos: () => datos(http.get(R.vehiculos())).then(V.vehiculos),
@@ -54,15 +57,15 @@ export const api = {
 
   /* ---------- Movimiento individual ---------- */
   moverPorCodigo: (v, codigo, origen) =>
-    datos(http.post(R.movimientos(id(v)), { codigo, origen }, { auth: true })).then(V.movimientoRegistrado),
+    datos(http.post(R.movimientos(id(v)), { codigo, origen }, { auth: "control" })).then(V.movimientoRegistrado),
 
   /* ---------- DEMO ---------- */
   demos: (v) => datos(http.get(R.demos(id(v)))).then(V.demos),
   crearDemo: (v, cuerpo) => datos(http.post(R.demos(id(v)), cuerpo, { auth: true })).then(V.demo),
   actualizarDemo: (v, d, cuerpo) => datos(http.post(R.demoActualizar(id(v), id(d)), cuerpo, { auth: true })).then(V.demo),
   eliminarDemo: (v, d) => datos(http.post(R.demoEliminar(id(v), id(d)), undefined, { auth: true })),
-  iniciarDemo: (v, d) => datos(http.post(R.demoIniciar(id(v), id(d)), undefined, { auth: true })).then(V.demoIniciada),
-  cancelarDemo: (v) => datos(http.post(R.demoCancelar(id(v)), undefined, { auth: true })).then(V.demoCancelada),
+  iniciarDemo: (v, d) => datos(http.post(R.demoIniciar(id(v), id(d)), undefined, { auth: "control" })).then(V.demoIniciada),
+  cancelarDemo: (v) => datos(http.post(R.demoCancelar(id(v)), undefined, { auth: "control" })).then(V.demoCancelada),
   ejecucionDemo: (v) => datos(http.get(R.demoEjecucion(id(v)))).then(V.demoEjecucion),
   movimientosDemo: (v, d) => datos(http.get(R.demoMovimientos(id(v), id(d)))).then(V.movimientosDemo),
   agregarMovimientoDemo: (v, d, cuerpo) =>

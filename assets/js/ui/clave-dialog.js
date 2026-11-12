@@ -2,6 +2,7 @@
  * Gestión de la clave X-API-Key desde la interfaz.
  * La clave se valida con GET /sesion (no modifica datos) antes de guardarse.
  */
+import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
 import { claveStore } from "../core/clave-store.js";
 import { $, el, toast } from "./dom.js";
@@ -15,12 +16,13 @@ function pintarBoton() {
   if (!b) return;
   const rol = claveStore.rol();
   const tiene = !!claveStore.obtener();
-  const libre = claveStore.esLibre();
-  b.querySelector("span").textContent = libre ? "Acceso de prueba" : tiene ? (ROLES[rol] || "Clave guardada") : "Sin clave";
+  const libre = claveStore.esAbierto();
+  b.querySelector("span").textContent = libre ? "Control abierto" : tiene ? (ROLES[rol] || "Clave guardada") : "Sin clave";
   b.classList.toggle("btn-outline-warning", !tiene);
   b.classList.toggle("btn-outline-success", tiene && !libre);
   b.classList.toggle("btn-outline-info", libre);
-  b.setAttribute("aria-label", libre ? "Acceso de prueba sin clave activo. Escribir otra clave"
+  b.title = libre ? "El servidor permite controlar sin clave. Para Administración escribe la clave." : "";
+  b.setAttribute("aria-label", libre ? "Control abierto sin clave. Escribir una clave para Administración"
     : tiene ? `Clave de ${ROLES[rol] || "operador"} guardada. Cambiar clave` : "Escribir clave de operador");
 }
 
@@ -30,6 +32,8 @@ export function abrirDialogoClave({ motivo = "" } = {}) {
     titulo: "Clave de acceso",
     cuerpo: [
       motivo ? el("p", { class: "alert alert-info py-2 small", text: motivo }) : null,
+      claveStore.esAbierto() ? el("p", { class: "alert alert-success py-2 small", text:
+        "El servidor tiene el control abierto: mover y la DEMO funcionan sin clave. Escribe una clave solo para crear, editar o eliminar en Administración." }) : null,
       campo({ nombre: "clave", etiqueta: "Clave X-API-Key (operador o administrador)", tipo: "password", requerido: true, maxLength: 256 }),
       campo({ nombre: "recordar", etiqueta: "Recordar en este dispositivo", tipo: "checkbox", valor: recordar }),
       el("p", { class: "form-text mb-0", text:
@@ -60,15 +64,26 @@ export async function inicializarClave() {
   claveStore.alCambiar(pintarBoton);
   $("btnClave")?.addEventListener("click", () => abrirDialogoClave());
   const clave = claveStore.obtener();
-  if (!clave) return;
+  if (!clave) { await comprobarControlAbierto(); return; }
   try {
     const { rol } = await api.sesion();
-    if (claveStore.esLibre()) { claveStore.fijarRol(rol); return; }      // acceso de prueba: no se guarda la clave
     claveStore.guardar(clave, { recordar: claveStore.recordada(), rolValidado: rol });
   } catch (e) {
     if (e.status === 401) {
       claveStore.olvidar();
       toast("La clave guardada ya no es válida.", "error");
+      await comprobarControlAbierto();
     }
+  }
+}
+
+/** Sin clave: pregunta al backend si permite controlar sin ella (CONTROL_ABIERTO=true). */
+async function comprobarControlAbierto() {
+  if (!CONFIG.controlAbierto) return;
+  try {
+    const r = await api.sesionSinClave();
+    claveStore.fijarAbierto(r.acceso === "abierto");
+  } catch {
+    claveStore.fijarAbierto(false);        // 401: el servidor exige clave (o no respondió)
   }
 }
