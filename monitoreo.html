@@ -65,32 +65,44 @@
 
     <div class="mon-grid">
       <!-- 3. Último movimiento reportado -->
-      <section id="tarjetaUltimo" class="tarjeta ultimo" aria-labelledby="tUltimo" aria-describedby="ultNota" data-estado="cargando">
+      <section id="tarjetaUltimo" class="tarjeta ultimo" aria-labelledby="tUltimo" aria-describedby="ultNota" data-estado="cargando" data-cat="">
         <div class="tarjeta-h">
           <h2 id="tUltimo">Último movimiento reportado</h2>
           <span id="ultFrescura" class="frescura" data-tipo="medio">
             <svg class="ico gira" aria-hidden="true"><use href="assets/icons/sprite.svg#i-sync"/></svg><span>Cargando…</span>
           </span>
         </div>
-        <div class="ult-cuerpo">
-          <span id="ultIco" class="ult-ico" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-pulse"/></svg></span>
-          <div class="ult-txt">
-            <p id="ultMov" class="ult-mov">Cargando…</p>
-            <p id="ultTipo" class="ult-tipo">Consultando GET /estado</p>
+        <div class="ult-hero">
+          <p id="ultCategoria" class="ult-cat">—</p>
+          <p id="ultMov" class="ult-mov">Cargando…</p>
+          <p id="ultTipo" class="ult-tipo">Consultando GET /estado</p>
+        </div>
+
+        <div class="ult-tiempo">
+          <div class="ult-reloj">
+            <span class="ult-etq">Hora</span>
+            <time id="ultHora" class="ult-hora">—</time>
+          </div>
+          <div class="ult-dia">
+            <span class="ult-etq">Fecha</span>
+            <time id="ultFecha" class="ult-fecha">—</time>
+            <small id="ultHace" class="ult-hace"></small>
           </div>
         </div>
-        <dl class="ult-datos">
+
+        <dl class="ult-meta">
           <div><dt>Vehículo</dt><dd id="ultVehiculo">—</dd></div>
-          <div><dt>Fecha</dt><dd><time id="ultFecha">—</time></dd></div>
-          <div><dt>Hora</dt><dd><time id="ultHora">—</time></dd></div>
           <div id="ultCodigoFila" hidden><dt>Código</dt><dd id="ultCodigo">—</dd></div>
           <div id="ultOrigenFila" hidden><dt>Origen</dt><dd id="ultOrigen">—</dd></div>
           <div><dt>Fuente</dt><dd id="ultFuente">—</dd></div>
         </dl>
-        <p id="ultNota" class="ult-nota">
-          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-info"/></svg>
-          <span><strong>Reportado</strong> = la API lo registró y lo difundió por WSS. <strong>No confirma ejecución física</strong>: el ESP32 aún no envía confirmación.</span>
-        </p>
+
+        <!-- Qué se sabe de este movimiento: reportado ≠ ejecutado físicamente -->
+        <ol id="ultNota" class="ult-pasos" aria-label="Qué se sabe de este movimiento">
+          <li id="pasoApi" data-estado="espera"><span class="paso-marca" aria-hidden="true"></span><span class="paso-txt">Registrado por la API</span></li>
+          <li id="pasoWss" data-estado="espera"><span class="paso-marca" aria-hidden="true"></span><span class="paso-txt">Difundido por WSS</span></li>
+          <li id="pasoFisico" data-estado="sin"><span class="paso-marca" aria-hidden="true"></span><span class="paso-txt">Ejecución física<small>sin confirmación del ESP32</small></span></li>
+        </ol>
         <p id="ultAnuncio" class="visually-hidden" aria-live="polite"></p>
       </section>
 

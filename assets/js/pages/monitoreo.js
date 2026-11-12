@@ -82,38 +82,70 @@ function frescura() {
   return { tipo: "ok", ic: "i-check", txt: "En vivo" };
 }
 
+/** Categoría del comando (solo para la etiqueta y el color de acento). */
+function categoria(a) {
+  if (a.demo) return { cat: "demo", txt: `DEMO${a.demo.nombre ? ` «${a.demo.nombre}»` : ""} · paso ${a.demo.orden ?? "?"}${a.demo.total ? ` de ${a.demo.total}` : ""}` };
+  if ((a.comando || "").toUpperCase() === CONFIG.nombreDetener) return { cat: "paro", txt: "Paro" };
+  if (Object.values(CONFIG.direcciones).includes(a.codigo)) return { cat: "conduccion", txt: "Conducción" };
+  if (Object.values(CONFIG.brazo).includes(a.codigo)) return { cat: "brazo", txt: "Brazo y pala" };
+  if (CONFIG.interruptores[a.codigo]) return { cat: "accesorio", txt: "Accesorio" };
+  return { cat: "otro", txt: "Comando" };
+}
+
+/** «hace 12 s» a partir de la hora del servidor (si el reloj del equipo difiere, se dice «hace instantes»). */
+function hace(ms) {
+  if (ms == null) return "";
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 10) return "hace instantes";
+  if (s < 60) return `hace ${s} s`;
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
+  const d = Math.floor(s / 86400);
+  return `hace ${d} día${d === 1 ? "" : "s"}`;
+}
+
+function paso(id, estado, texto, detalle = "") {
+  const li = $(id);
+  li.dataset.estado = estado;           // ok | no | sin | espera  (la marca ✓ · – · ? va por CSS, además del color)
+  li.querySelector(".paso-txt").replaceChildren(texto, ...(detalle ? [el("small", { text: detalle })] : []));
+}
+
 function pintarUltimo() {
   const a = ultimo.actual;
   const f = frescura();
   const badge = $("ultFrescura");
   badge.dataset.tipo = f.tipo;
   badge.replaceChildren(icono(f.ic, f.gira ? "ico gira" : "ico"), el("span", { text: f.txt }));
-  $("tarjetaUltimo").dataset.estado = a ? (a.demo ? "demo" : "datos") : tarjeta.cargando ? "cargando" : "vacio";
+  const card = $("tarjetaUltimo");
+  card.dataset.estado = a ? (a.demo ? "demo" : "datos") : tarjeta.cargando ? "cargando" : "vacio";
   $("ultVehiculo").textContent = vehiculo?.nombre || `Vehículo #${V}`;
 
   if (!a) {
-    $("ultIco").replaceChildren(icono(tarjeta.error ? "i-x" : "i-pulse"));
+    card.dataset.cat = "";
+    $("ultCategoria").textContent = tarjeta.cargando ? "Consultando…" : tarjeta.error ? "Sin datos actualizados" : "Sin registros";
     $("ultMov").textContent = tarjeta.cargando ? "Cargando…" : "Sin movimientos";
-    $("ultTipo").textContent = tarjeta.cargando ? "Consultando GET /estado"
+    $("ultTipo").textContent = tarjeta.cargando ? "Consultando el estado del vehículo (GET /estado)."
       : tarjeta.error ? `No se pudo consultar el estado: ${tarjeta.error}`
       : "El vehículo aún no tiene movimientos reportados.";
     for (const id of ["ultFecha", "ultHora", "ultFuente"]) $(id).textContent = "—";
+    $("ultHace").textContent = "";
     $("ultFecha").removeAttribute("datetime");
     $("ultHora").removeAttribute("datetime");
     $("ultCodigoFila").hidden = true;
     $("ultOrigenFila").hidden = true;
+    paso("pasoApi", "espera", "Registrado por la API");
+    paso("pasoWss", "espera", "Difundido por WSS");
+    paso("pasoFisico", "sin", "Ejecución física", "sin confirmación del ESP32");
     return;
   }
 
-  const esParo = (a.comando || "").toUpperCase() === CONFIG.nombreDetener;
-  $("ultIco").replaceChildren(icono(esParo ? "i-stop" : CONFIG.iconos[a.codigo] || "i-bolt"));
-  $("ultIco").dataset.paro = String(esParo);
+  const c = categoria(a);
+  card.dataset.cat = c.cat;
+  $("ultCategoria").textContent = c.txt;
   $("ultMov").textContent = etiqueta(a.comando);
-  const nombreDemo = a.demo?.nombre ? ` «${a.demo.nombre}»` : "";
-  $("ultTipo").textContent = a.demo
-    ? `Paso ${a.demo.orden ?? "?"}${a.demo.total ? ` de ${a.demo.total}` : ""} de la DEMO${nombreDemo} · no se guarda en el historial`
-    : a.evento === "movimiento_individual" ? "Movimiento individual · registrado en el historial"
-    : "Último comando registrado del vehículo";
+  $("ultTipo").textContent = a.demo ? "Paso de una DEMO: no se guarda en el historial."
+    : a.evento === "movimiento_individual" ? "Movimiento individual guardado en el historial."
+    : "Último comando registrado del vehículo.";
   if (a.ms != null) {
     const iso = new Date(a.ms).toISOString();
     $("ultFecha").textContent = fecha(a.ms);
@@ -123,14 +155,25 @@ function pintarUltimo() {
   } else {
     $("ultFecha").textContent = "Sin fecha registrada";
     $("ultHora").textContent = "—";
+    $("ultFecha").removeAttribute("datetime");
+    $("ultHora").removeAttribute("datetime");
   }
+  $("ultHace").textContent = hace(a.ms);
   $("ultCodigoFila").hidden = a.codigo == null;
   $("ultCodigo").textContent = a.codigo ?? "—";
   $("ultOrigenFila").hidden = !a.origen;
-  $("ultOrigen").textContent = a.origen || "—";
-  $("ultFuente").textContent = a.fuente === FUENTE.WSS ? "WebSocket (tiempo real)" : "API REST (GET /estado)";
+  $("ultOrigen").textContent = (a.origen || "—").replace(/^WEB_/, "");
+  $("ultOrigen").title = a.origen || "";
+  $("ultFuente").textContent = a.fuente === FUENTE.WSS ? "WebSocket" : "API REST";
   $("ultFuente").title = a.fuente === FUENTE.WSS ? `Evento WSS «${a.evento}»` : "Consulta GET /vehiculos/{id}/estado";
+
+  paso("pasoApi", "ok", a.demo ? "Emitido por la DEMO del backend" : "Registrado por la API");
+  if (a.fuente === FUENTE.WSS) paso("pasoWss", "ok", "Difundido por WSS", "recibido en este navegador");
+  else paso("pasoWss", "no", "Difundido por WSS", "no observado: dato de GET /estado");
+  paso("pasoFisico", "sin", "Ejecución física", "sin confirmación del ESP32");
 }
+// «hace …» se mantiene al día sin repintar todo.
+setInterval(() => { if (ultimo.actual) $("ultHace").textContent = hace(ultimo.actual.ms); }, 10000);
 
 function anunciarUltimo() {
   const t = $("tarjetaUltimo");
