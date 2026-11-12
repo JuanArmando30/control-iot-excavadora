@@ -4,7 +4,7 @@
  */
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
-import { WsClient } from "../core/ws-client.js";
+import { WsCompartido } from "../core/ws-compartido.js";
 import { ConectividadService } from "../domain/conectividad-service.js";
 import { ConectividadPanel, EstadoBarra } from "../ui/conectividad-panel.js";
 import { $, toast } from "../ui/dom.js";
@@ -19,7 +19,8 @@ export function iniciarConectividad({ compacto = false, barra = false } = {}) {
   if (barra) new EstadoBarra($("panelConectividad"), conectividad);
   else new ConectividadPanel($("panelConectividad"), conectividad, { compacto });
 
-  const ws = new WsClient({
+  // Una sola conexión WSS por navegador, compartida entre pestañas de Control y Monitoreo.
+  const ws = new WsCompartido({
     url: CONFIG.wsUrl(CONFIG.vehiculoId),
     idVehiculo: CONFIG.vehiculoId,
     pingMs: t.wsPingMs,

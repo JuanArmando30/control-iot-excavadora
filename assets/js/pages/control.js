@@ -4,8 +4,8 @@
  * encendido y DETENER), cinco modos de manejo (Pulso, Joystick, Voz,
  * Giroscopio e IA con gestos de la mano) y panel
  * de conectividad, todo en una sola pantalla.
- * Estado, DEMO y mensajes están en Monitoreo. La DEMO se sigue vigilando
- * aquí para bloquear el mando mientras corre y para que DETENER la cancele.
+ * El seguimiento (último movimiento e historial) está en Monitoreo. La DEMO se elige e inicia aquí y se
+ * vigila para bloquear el mando mientras corre y para que DETENER la cancele.
  */
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";

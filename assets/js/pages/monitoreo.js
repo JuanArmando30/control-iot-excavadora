@@ -1,129 +1,228 @@
 /**
- * Página de MONITOREO: conectividad, estado registrado, DEMO (seleccionar,
- * iniciar, cancelar y ver avance), historial, catálogo y eventos WSS.
- * Consultar no requiere clave; iniciar o cancelar una DEMO sí.
+ * Página de MONITOREO (solo lectura, no requiere clave):
+ *  1. Nombre del vehículo (GET /vehiculos/{id}).
+ *  2. Indicadores WSS · API AWS · Amazon RDS (mismos que en Control).
+ *  3. Tarjeta del último movimiento REPORTADO: GET /estado al entrar y al
+ *     reconectar; después, eventos WSS válidos del mismo vehículo (también de
+ *     otras sesiones y pasos de DEMO). Nunca muestra datos más viejos que los
+ *     que ya tiene (domain/monitoreo-estado.js).
+ *  4. Tabla de los últimos diez movimientos PERSISTIDOS (GET /historial). Un
+ *     evento WSS de movimiento individual dispara una consulta (agrupada y sin
+ *     consultas simultáneas) que reconcilia la tabla sin recargar la página.
+ *  + Registro técnico de eventos WSS, plegado.
  */
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
 import { WS } from "../core/ws-client.js";
-import { claveStore } from "../core/clave-store.js";
+import { Catalogo } from "../domain/catalogo.js";
 import { DemoService } from "../domain/demo-service.js";
-import { DemoPanel } from "../ui/demo-panel.js";
-import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
-import { $, el, fechaHora, fechaServidor, hora, toast } from "../ui/dom.js";
-import { iniciarConectividad, pintarVehiculo, textoEvento } from "./comun.js";
+import { UltimoMovimiento, HistorialReciente, FUENTE } from "../domain/monitoreo-estado.js";
+import { inicializarClave } from "../ui/clave-dialog.js";
+import { $, el, hora, icono } from "../ui/dom.js";
+import { iniciarConectividad, textoEvento } from "./comun.js";
 
 const V = CONFIG.vehiculoId;
-const MAX_FILAS = 200;
+const MAX_EVENTOS = 200;
 const GRUPO = {
   estado_inicial: "estado", estado_actualizado: "estado", movimiento_individual: "movimiento",
   demo_iniciada: "demo", demo_movimiento: "demo", demo_finalizada: "demo", demo_cancelada: "demo",
   error: "error", pong: "sistema",
 };
+const FMT_FECHA = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+const FMT_HORA = new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+const fecha = (ms) => (ms == null ? "—" : FMT_FECHA.format(ms));
+const horaDe = (ms) => (ms == null ? "—" : FMT_HORA.format(ms));
+const etiqueta = (nombre) => (nombre ? Catalogo.etiqueta({ nombre }) : "Comando sin nombre");
 
 const { ws } = iniciarConectividad();
 const demo = new DemoService({ api, vehiculoId: V });
-const demoPanel = new DemoPanel({ select: $("selDemo"), barra: $("barDemo"), barraPaso: $("barPaso"), texto: $("txtDemo") });
-const contadores = { total: 0, movimiento: 0, demo: 0, error: 0 };
-let pausado = false;
-let filtro = "todos";
+const ultimo = new UltimoMovimiento();
+const historial = new HistorialReciente(10);
 let wsAbierto = false;
+let vehiculo = null;
 
-/* ------------------------------- DEMO ------------------------------- */
-function actualizarBotonesDemo() {
-  const tieneClave = !!claveStore.obtener();
-  const e = demo.estado;
-  $("btnDemoIniciar").disabled = !(tieneClave && wsAbierto && !e.activa && !demo.solicitando && demoPanel.seleccion);
-  $("btnDemoCancelar").disabled = !(tieneClave && e.activa && !demo.solicitando);
-  $("btnDemoIniciar").setAttribute("aria-busy", String(demo.solicitando));
-}
-
-async function iniciarDemo() {
-  const id = demoPanel.seleccion;
-  if (!id) { toast("Selecciona una DEMO.", "error"); return; }
-  if (!claveStore.obtener()) { abrirDialogoClave({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
+/* ------------------------------ 1. Vehículo ------------------------------ */
+async function cargarVehiculo() {
   try {
-    const r = await demo.iniciar(id);
-    toast(`DEMO «${r.nombre}» aceptada (202) · ${r.total_movimientos} movimientos.`, "ok");
+    vehiculo = await api.vehiculo(V);
+    $("monNombre").textContent = vehiculo.nombre;
+    $("vehiculoNombre").textContent = `${vehiculo.nombre} · ${vehiculo.microcontrolador || "IoT"} · #${vehiculo.id_vehiculo}`;
+    const partes = [vehiculo.modelo, vehiculo.microcontrolador, `Vehículo #${vehiculo.id_vehiculo}`, vehiculo.activo ? "Activo en la base de datos" : "Inactivo en la base de datos"];
+    $("monVehiculoInfo").textContent = partes.filter(Boolean).join(" · ");
   } catch (e) {
-    toast(e.message, "error");
-    if (e.status === 401) abrirDialogoClave({ motivo: e.message });
+    $("monNombre").textContent = `Vehículo #${V}`;
+    $("monVehiculoInfo").textContent = "No se pudo consultar el nombre: " + e.message;
   }
+  pintarUltimo();
 }
 
-async function cancelarDemo() {
-  if (!claveStore.obtener()) { abrirDialogoClave(); return; }
-  try {
-    await demo.cancelar();
-    toast("Cancelación aceptada: el vehículo queda en DETENER.", "ok");
-  } catch (e) {
-    toast(e.message, "error");
-  }
-}
-
-async function cargarDemos() {
-  try { demoPanel.pintarLista(await demo.cargar()); }
-  catch (e) { demoPanel.pintarLista([]); toast("DEMO: " + e.message, "error"); }
-  actualizarBotonesDemo();
-}
-
-/* ------------------------------ Estado ------------------------------ */
-function pintarEstado({ comando, codigo, fecha, conectado, fuente }) {
-  $("monComando").textContent = comando || "—";
-  $("monCodigo").textContent = codigo ?? "—";
-  $("monFecha").textContent = fecha ? fechaHora(fecha) : "—";
-  $("monFuente").textContent = fuente;
-  const c = $("monConectado");
-  c.textContent = conectado == null ? "—" : conectado ? "true (registrado en BD)" : "false (registrado en BD)";
-}
+/* ------------------------ 2. Último movimiento ------------------------ */
+const tarjeta = { cargando: true, error: "" };
 
 async function cargarEstado() {
+  tarjeta.cargando = !ultimo.actual;
+  pintarUltimo();
   try {
-    const e = await api.estado(V);
-    if (!e) { pintarEstado({ fuente: "El vehículo aún no tiene estado registrado" }); return; }
-    pintarEstado({ comando: e.comando, codigo: e.codigo, fecha: fechaServidor(e.fecha_actualizacion), conectado: e.conectado, fuente: "GET /estado" });
-  } catch (err) {
-    $("monFuente").textContent = err.message;
+    ultimo.desdeEstado(await api.estado(V));          // ignorado si ya hay algo más reciente (p. ej. por WSS)
+    tarjeta.error = "";
+  } catch (e) {
+    tarjeta.error = e.message;
   }
+  tarjeta.cargando = false;
+  pintarUltimo();
 }
 
-/* ----------------------------- Historial ---------------------------- */
-let tHist = null;
+function frescura() {
+  const a = ultimo.actual;
+  if (!a && tarjeta.cargando) return { tipo: "medio", ic: "i-sync", txt: "Cargando…", gira: true };
+  if (!a && tarjeta.error) return { tipo: "mal", ic: "i-x", txt: "Sin datos actualizados" };
+  if (!a) return { tipo: "neutro", ic: "i-info", txt: wsAbierto ? "Esperando movimientos" : "Sin datos actualizados" };
+  if (!wsAbierto) return { tipo: "medio", ic: "i-history", txt: "Último valor conocido · sin datos actualizados" };
+  if (tarjeta.error && a.fuente === FUENTE.REST) return { tipo: "medio", ic: "i-history", txt: "Último valor conocido" };
+  return { tipo: "ok", ic: "i-check", txt: "En vivo" };
+}
+
+function pintarUltimo() {
+  const a = ultimo.actual;
+  const f = frescura();
+  const badge = $("ultFrescura");
+  badge.dataset.tipo = f.tipo;
+  badge.replaceChildren(icono(f.ic, f.gira ? "ico gira" : "ico"), el("span", { text: f.txt }));
+  $("tarjetaUltimo").dataset.estado = a ? (a.demo ? "demo" : "datos") : tarjeta.cargando ? "cargando" : "vacio";
+  $("ultVehiculo").textContent = vehiculo?.nombre || `Vehículo #${V}`;
+
+  if (!a) {
+    $("ultIco").replaceChildren(icono(tarjeta.error ? "i-x" : "i-pulse"));
+    $("ultMov").textContent = tarjeta.cargando ? "Cargando…" : "Sin movimientos";
+    $("ultTipo").textContent = tarjeta.cargando ? "Consultando GET /estado"
+      : tarjeta.error ? `No se pudo consultar el estado: ${tarjeta.error}`
+      : "El vehículo aún no tiene movimientos reportados.";
+    for (const id of ["ultFecha", "ultHora", "ultFuente"]) $(id).textContent = "—";
+    $("ultFecha").removeAttribute("datetime");
+    $("ultHora").removeAttribute("datetime");
+    $("ultCodigoFila").hidden = true;
+    $("ultOrigenFila").hidden = true;
+    return;
+  }
+
+  const esParo = (a.comando || "").toUpperCase() === CONFIG.nombreDetener;
+  $("ultIco").replaceChildren(icono(esParo ? "i-stop" : CONFIG.iconos[a.codigo] || "i-bolt"));
+  $("ultIco").dataset.paro = String(esParo);
+  $("ultMov").textContent = etiqueta(a.comando);
+  const nombreDemo = a.demo?.nombre ? ` «${a.demo.nombre}»` : "";
+  $("ultTipo").textContent = a.demo
+    ? `Paso ${a.demo.orden ?? "?"}${a.demo.total ? ` de ${a.demo.total}` : ""} de la DEMO${nombreDemo} · no se guarda en el historial`
+    : a.evento === "movimiento_individual" ? "Movimiento individual · registrado en el historial"
+    : "Último comando registrado del vehículo";
+  if (a.ms != null) {
+    const iso = new Date(a.ms).toISOString();
+    $("ultFecha").textContent = fecha(a.ms);
+    $("ultHora").textContent = horaDe(a.ms);
+    $("ultFecha").setAttribute("datetime", iso);
+    $("ultHora").setAttribute("datetime", iso);
+  } else {
+    $("ultFecha").textContent = "Sin fecha registrada";
+    $("ultHora").textContent = "—";
+  }
+  $("ultCodigoFila").hidden = a.codigo == null;
+  $("ultCodigo").textContent = a.codigo ?? "—";
+  $("ultOrigenFila").hidden = !a.origen;
+  $("ultOrigen").textContent = a.origen || "—";
+  $("ultFuente").textContent = a.fuente === FUENTE.WSS ? "WebSocket (tiempo real)" : "API REST (GET /estado)";
+  $("ultFuente").title = a.fuente === FUENTE.WSS ? `Evento WSS «${a.evento}»` : "Consulta GET /vehiculos/{id}/estado";
+}
+
+function anunciarUltimo() {
+  const t = $("tarjetaUltimo");
+  t.classList.remove("recien");
+  void t.offsetWidth;
+  t.classList.add("recien");
+  const a = ultimo.actual;
+  $("ultAnuncio").textContent = `${a.demo ? "Paso de DEMO" : "Nuevo movimiento reportado"}: ${etiqueta(a.comando)}, ${horaDe(a.ms)}`;
+}
+
+/* ------------------------- 3. Últimos 10 movimientos ------------------------- */
+const consulta = { enCurso: false, pendiente: false, timer: null, error: "" };
+
+/** Agrupa avisos seguidos (p. ej. joystick) en UNA consulta y nunca hace dos a la vez. */
+function programarHistorial(ms = CONFIG.tiempos.historialRetrasoMs) {
+  clearTimeout(consulta.timer);
+  consulta.timer = setTimeout(cargarHistorial, ms);
+}
+
 async function cargarHistorial() {
-  const ul = $("listaHistorial");
+  if (consulta.enCurso) { consulta.pendiente = true; return; }
+  consulta.enCurso = true;
+  consulta.pendiente = false;
+  $("btnHistorial").disabled = true;
+  $("btnHistorial").setAttribute("aria-busy", "true");
+  if (historial.cargado) pintarEstadoHist("Actualizando…", "medio");
+  const n = historial.nuevaSolicitud();
   try {
     const h = await api.historial(V);
-    if (!h.movimientos.length) {
-      ul.replaceChildren(el("li", { class: "vacio", text: "Aún no hay movimientos individuales." }));
-    } else {
-      ul.replaceChildren(...h.movimientos.map((m) => el("li", {}, [
-        el("span", { class: "reg-txt", text: `${m.comando || "—"} (#${m.codigo ?? "—"})` }),
-        el("span", { class: "reg-etq", text: m.origen }),
-        el("time", { text: hora(fechaServidor(m.fecha_hora)) }),
-      ])));
-    }
-    $("histTotal").textContent = `${h.total_devueltos} de máx. ${h.limite ?? 10}`;
-  } catch (err) {
-    ul.replaceChildren(el("li", { class: "vacio", text: err.message }));
-  }
-}
-const programarHistorial = () => { clearTimeout(tHist); tHist = setTimeout(cargarHistorial, CONFIG.tiempos.historialRetrasoMs); };
-
-/* ----------------------------- Catálogo ----------------------------- */
-async function cargarCatalogo() {
-  const tb = $("tablaCatalogo");
-  try {
-    const lista = (await api.comandos(V)).sort((a, b) => a.codigo - b.codigo);
-    tb.replaceChildren(...lista.map((c) => el("tr", { class: c.activo ? "" : "text-body-tertiary" }, [
-      el("td", { text: c.codigo }), el("td", { text: c.nombre }),
-      el("td", { text: c.activo ? "Activo" : "Inactivo" }),
-    ])));
-  } catch (err) {
-    tb.replaceChildren(el("tr", {}, [el("td", { text: err.message, attrs: { colspan: 3 } })]));
+    const r = historial.aplicar(n, h.movimientos);
+    consulta.error = "";
+    if (r) pintarTabla(r.filas, r.nuevas);
+  } catch (e) {
+    consulta.error = e.message;
+    if (!historial.cargado) pintarTablaMensaje("error", "No se pudo cargar el historial", e.message);
+  } finally {
+    consulta.enCurso = false;
+    $("btnHistorial").disabled = false;
+    $("btnHistorial").setAttribute("aria-busy", "false");
+    pintarEstadoHist();
+    if (consulta.pendiente) programarHistorial(0);
   }
 }
 
-/* ------------------------------ Eventos ----------------------------- */
+function pintarEstadoHist(texto, tipo) {
+  const p = $("histEstado");
+  if (!texto) {
+    const total = historial.filas.length;
+    if (consulta.error && historial.cargado) { texto = `No se pudo actualizar: ${consulta.error.replace(/\.$/, "")}. Se muestran los datos anteriores.`; tipo = "mal"; }
+    else if (consulta.error) { texto = "Error al cargar el historial."; tipo = "mal"; }
+    else { texto = `${total} de 10 · consultado a las ${hora()}${wsAbierto ? " · se actualiza solo" : " · sin WSS: pulsa «Actualizar»"}`; tipo = "ok"; }
+  }
+  p.textContent = texto;
+  p.dataset.tipo = tipo;
+}
+
+function pintarTablaMensaje(tipo, titulo, detalle = "") {
+  const ic = tipo === "error" ? "i-x" : tipo === "cargando" ? "i-sync" : "i-list";
+  const contenido = [icono(ic, tipo === "cargando" ? "ico gira" : "ico"), el("strong", { text: titulo })];
+  if (detalle) contenido.push(el("small", { text: detalle }));
+  if (tipo === "error") {
+    contenido.push(el("button", { class: "btn btn-sm btn-outline-info", text: "Reintentar", attrs: { type: "button" }, on: { click: () => cargarHistorial() } }));
+  }
+  $("tablaMov").replaceChildren(el("tr", { class: `fila-msg fila-${tipo}` }, [
+    el("td", { attrs: { colspan: 6 } }, [el("div", { class: "tabla-msg" }, contenido)]),
+  ]));
+}
+
+function pintarTabla(filas, nuevas) {
+  if (!filas.length) { pintarTablaMensaje("vacio", "Sin movimientos", "Este vehículo aún no tiene movimientos individuales guardados."); return; }
+  $("tablaMov").replaceChildren(...filas.map((m, i) => {
+    const iso = m.ms != null ? new Date(m.ms).toISOString() : null;
+    const tr = el("tr", { class: nuevas.has(m.clave) ? "nueva" : "" }, [
+      el("td", { class: "c-num", text: i + 1 }),
+      el("th", { class: "c-mov", attrs: { scope: "row", title: m.comando || "" } }, [
+        el("span", { class: "mov-nombre", text: etiqueta(m.comando) }),
+        m.codigo != null ? el("span", { class: "mov-cod-movil", text: `#${m.codigo}`, attrs: { "aria-hidden": "true" } }) : "",
+      ]),
+      el("td", { class: "c-fecha" }, [m.ms != null ? el("time", { text: fecha(m.ms), attrs: { datetime: iso } }) : "—"]),
+      el("td", { class: "c-hora" }, [m.ms != null ? el("time", { text: horaDe(m.ms), attrs: { datetime: iso } }) : "—"]),
+      el("td", { class: "c-cod", text: m.codigo ?? "—" }),
+      el("td", { class: "c-ori", text: (m.origen || "—").replace(/^WEB_/, "") }),
+    ]);
+    return tr;
+  }));
+}
+
+/* ------------------------------ Eventos WSS ------------------------------ */
+let pausado = false;
+let filtro = "todos";
+let totalEventos = 0;
+
 function agregarFila(ev) {
   const grupo = GRUPO[ev.evento] || "sistema";
   const fila = el("tr", { dataset: { grupo } }, [
@@ -137,54 +236,38 @@ function agregarFila(ev) {
   fila.hidden = filtro !== "todos" && filtro !== grupo;
   const tb = $("tablaEventos");
   tb.prepend(fila);
-  while (tb.children.length > MAX_FILAS) tb.lastChild.remove();
+  while (tb.children.length > MAX_EVENTOS) tb.lastChild.remove();
   $("eventosVacio").hidden = true;
 }
 
-function contar(ev) {
-  contadores.total++;
-  if (ev.evento === "movimiento_individual") contadores.movimiento++;
-  if (ev.evento === "demo_movimiento") contadores.demo++;
-  if (ev.evento === "error") contadores.error++;
-  $("cntTotal").textContent = contadores.total;
-  $("cntMov").textContent = contadores.movimiento;
-  $("cntDemo").textContent = contadores.demo;
-  $("cntError").textContent = contadores.error;
-}
-
 ws.addEventListener("mensaje", (e) => {
-  const ev = e.detail;
+  const ev = e.detail;                    // ya validado: evento conocido y del mismo vehículo
   if (ev.evento === "pong") return;
-  contar(ev);
+  totalEventos++;
+  $("cntEventos").textContent = `${totalEventos} evento${totalEventos === 1 ? "" : "s"}`;
   demo.procesarEvento(ev);
-  if (["estado_inicial", "estado_actualizado", "movimiento_individual"].includes(ev.evento)) {
-    pintarEstado({
-      comando: ev.comando, codigo: ev.codigo, fecha: fechaServidor(ev.datos.fecha_actualizacion) || ev.timestamp,
-      conectado: ev.datos.conectado, fuente: "WSS · " + ev.evento,
-    });
-  } else if (ev.evento === "demo_movimiento" || ev.evento === "demo_cancelada") {
-    $("monComando").textContent = ev.comando || "—";
-    $("monCodigo").textContent = ev.codigo ?? "—";
-    $("monFecha").textContent = fechaHora(ev.timestamp);
-    $("monFuente").textContent = "WSS · " + ev.evento + " (no se guarda en historial)";
+  if (ultimo.desdeEvento(ev)) {
+    if (ultimo.actual.demo) ultimo.actual.demo.nombre = demo.estado.nombre || "";    // se conserva aunque la DEMO termine
+    pintarUltimo();
+    anunciarUltimo();
   }
-  if (ev.evento === "movimiento_individual") programarHistorial();
+  // Solo los movimientos individuales se guardan en RDS: se reconcilia la tabla con el historial confirmado.
+  if (ev.evento === "movimiento_individual" && ev.datos.registrado_en_historial !== false) programarHistorial();
   if (!pausado) agregarFila(ev);
 });
+
 ws.addEventListener("estado", (e) => {
+  const antes = wsAbierto;
   wsAbierto = e.detail.estado === WS.ABIERTO;
-  actualizarBotonesDemo();
-  if (wsAbierto) {
-    demo.sincronizar().catch(() => {});
+  if (wsAbierto && !antes) {
+    // Conexión nueva o recuperada: lo que pasó mientras tanto se recupera por REST.
     cargarEstado();
-    programarHistorial();
+    programarHistorial(0);
+    demo.sincronizar().catch(() => {});
   }
+  pintarUltimo();
+  if (!consulta.enCurso && historial.cargado) pintarEstadoHist();
 });
-demo.addEventListener("cambio", (e) => { demoPanel.pintar(e.detail); actualizarBotonesDemo(); });
-$("btnDemoIniciar").addEventListener("click", iniciarDemo);
-$("btnDemoCancelar").addEventListener("click", cancelarDemo);
-$("selDemo").addEventListener("change", actualizarBotonesDemo);
-claveStore.alCambiar(actualizarBotonesDemo);
 
 $("selFiltro").addEventListener("change", (e) => {
   filtro = e.target.value;
@@ -194,15 +277,15 @@ $("btnPausa").addEventListener("click", (e) => {
   pausado = !pausado;
   e.currentTarget.setAttribute("aria-pressed", String(pausado));
   e.currentTarget.querySelector("span").textContent = pausado ? "Reanudar" : "Pausar";
-  toast(pausado ? "Lista en pausa (los contadores siguen)." : "Lista reanudada.");
 });
 $("btnLimpiar").addEventListener("click", () => { $("tablaEventos").replaceChildren(); $("eventosVacio").hidden = false; });
-$("btnHistorial").addEventListener("click", cargarHistorial);
-$("btnEstado").addEventListener("click", cargarEstado);
+$("btnHistorial").addEventListener("click", () => cargarHistorial());
 $("wsUrl").textContent = CONFIG.wsUrl(V);
 
 (async function iniciar() {
   inicializarClave();
-  await Promise.all([pintarVehiculo(), cargarEstado(), cargarHistorial(), cargarCatalogo(), cargarDemos(), demo.sincronizar().catch(() => {})]);
+  pintarUltimo();
+  pintarTablaMensaje("cargando", "Cargando historial…");
   ws.conectar();
+  await Promise.all([cargarVehiculo(), cargarEstado(), cargarHistorial(), demo.sincronizar().catch(() => {})]);
 })();

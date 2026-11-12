@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'; connect-src https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Monitoreo del vehículo IoT: conectividad, estado, ejecución de DEMO, historial y eventos WebSocket.">
+  <meta name="description" content="Monitoreo del vehículo IoT: nombre del vehículo, último movimiento reportado, últimos diez movimientos e indicadores WSS, API AWS y Amazon RDS.">
   <meta name="theme-color" content="#060d24">
   <title>Monitoreo · Excavadora IoT</title>
   <link rel="icon" href="assets/icons/favicon.ico" sizes="16x16 32x32 48x48">
@@ -52,113 +52,109 @@
     </div>
   </header>
 
-  <main id="contenido" class="container-xl contenido">
-    <h1 class="titulo-pagina">Monitoreo en tiempo real</h1>
+  <main id="contenido" class="container-xl contenido monitoreo">
+    <!-- 1. Vehículo -->
+    <section class="mon-vehiculo" aria-labelledby="monNombre">
+      <p class="mon-eyebrow"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pulse"/></svg>Monitoreo en tiempo real</p>
+      <h1 id="monNombre" class="mon-nombre">Cargando vehículo…</h1>
+      <p id="monVehiculoInfo" class="mon-info">Consultando la API…</p>
+    </section>
+
+    <!-- 2. Conectividad: WSS · API AWS · Amazon RDS -->
     <section id="panelConectividad" aria-label="Estado de la conectividad"></section>
 
-    <div class="row g-3">
-      <div class="col-md-6 col-xl-4">
-        <section class="tarjeta h-100" aria-labelledby="tEstado">
-          <div class="tarjeta-h">
-            <h2 id="tEstado">Estado registrado</h2>
-            <button id="btnEstado" class="btn btn-sm btn-outline-info" type="button">Actualizar</button>
+    <div class="mon-grid">
+      <!-- 3. Último movimiento reportado -->
+      <section id="tarjetaUltimo" class="tarjeta ultimo" aria-labelledby="tUltimo" aria-describedby="ultNota" data-estado="cargando">
+        <div class="tarjeta-h">
+          <h2 id="tUltimo">Último movimiento reportado</h2>
+          <span id="ultFrescura" class="frescura" data-tipo="medio">
+            <svg class="ico gira" aria-hidden="true"><use href="assets/icons/sprite.svg#i-sync"/></svg><span>Cargando…</span>
+          </span>
+        </div>
+        <div class="ult-cuerpo">
+          <span id="ultIco" class="ult-ico" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-pulse"/></svg></span>
+          <div class="ult-txt">
+            <p id="ultMov" class="ult-mov">Cargando…</p>
+            <p id="ultTipo" class="ult-tipo">Consultando GET /estado</p>
           </div>
-          <dl class="kv">
-            <dt>Último comando</dt><dd id="monComando" class="destacado">—</dd>
-            <dt>Código</dt><dd id="monCodigo">—</dd>
-            <dt>Fecha</dt><dd id="monFecha">—</dd>
-            <dt>Campo «conectado»</dt><dd id="monConectado">—</dd>
-            <dt>Fuente</dt><dd id="monFuente">—</dd>
-          </dl>
-          <p class="ayuda mb-0">«conectado» es un dato guardado en RDS; aún no proviene de una señal verificable del ESP32.</p>
-        </section>
-      </div>
+        </div>
+        <dl class="ult-datos">
+          <div><dt>Vehículo</dt><dd id="ultVehiculo">—</dd></div>
+          <div><dt>Fecha</dt><dd><time id="ultFecha">—</time></dd></div>
+          <div><dt>Hora</dt><dd><time id="ultHora">—</time></dd></div>
+          <div id="ultCodigoFila" hidden><dt>Código</dt><dd id="ultCodigo">—</dd></div>
+          <div id="ultOrigenFila" hidden><dt>Origen</dt><dd id="ultOrigen">—</dd></div>
+          <div><dt>Fuente</dt><dd id="ultFuente">—</dd></div>
+        </dl>
+        <p id="ultNota" class="ult-nota">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-info"/></svg>
+          <span><strong>Reportado</strong> = la API lo registró y lo difundió por WSS. <strong>No confirma ejecución física</strong>: el ESP32 aún no envía confirmación.</span>
+        </p>
+        <p id="ultAnuncio" class="visually-hidden" aria-live="polite"></p>
+      </section>
 
-      <div class="col-md-6 col-xl-4">
-        <section class="tarjeta h-100" aria-labelledby="tDemo">
-          <div class="tarjeta-h"><h2 id="tDemo">DEMO</h2></div>
-          <label class="form-label small" for="selDemo">DEMO disponibles (configuradas en la base de datos)</label>
-          <select id="selDemo" class="form-select"></select>
-          <div class="d-flex gap-2 mt-2 mb-3">
-            <button id="btnDemoIniciar" class="btn btn-success flex-fill" type="button" disabled>
-              <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-play"/></svg> Iniciar
-            </button>
-            <button id="btnDemoCancelar" class="btn btn-danger flex-fill" type="button" disabled>
-              <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-stop"/></svg> Cancelar
-            </button>
-          </div>
-          <div class="progress" role="progressbar" aria-label="Avance de la DEMO" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <div id="barDemo" class="progress-bar barra-demo"></div>
-          </div>
-          <div class="progress progreso-paso" role="progressbar" aria-label="Duración del paso actual" aria-valuemin="0" aria-valuemax="100">
-            <div id="barPaso" class="progress-bar barra-paso"></div>
-          </div>
-          <p id="txtDemo" class="ayuda" aria-live="polite">Sin DEMO en ejecución.</p>
-          <div class="contadores">
-            <div><strong id="cntTotal">0</strong><span>eventos</span></div>
-            <div><strong id="cntMov">0</strong><span>individuales</span></div>
-            <div><strong id="cntDemo">0</strong><span>pasos DEMO</span></div>
-            <div><strong id="cntError">0</strong><span>errores</span></div>
-          </div>
-        </section>
-      </div>
-
-      <div class="col-md-6 col-xl-4">
-        <section class="tarjeta h-100" aria-labelledby="tHist">
-          <div class="tarjeta-h">
-            <h2 id="tHist">Historial</h2>
-            <button id="btnHistorial" class="btn btn-sm btn-outline-info" type="button">Actualizar</button>
-          </div>
-          <p class="ayuda mt-0">Últimos movimientos individuales (<span id="histTotal">—</span>). Los pasos de DEMO no se guardan aquí.</p>
-          <ul id="listaHistorial" class="registro"></ul>
-        </section>
-      </div>
-
-      <div class="col-md-6 col-xl-4">
-        <section class="tarjeta h-100" aria-labelledby="tCat">
-          <div class="tarjeta-h"><h2 id="tCat">Catálogo de comandos</h2></div>
-          <div class="table-responsive tabla-alta">
-            <table class="table table-sm align-middle mb-0">
-              <thead><tr><th scope="col">Código</th><th scope="col">Nombre</th><th scope="col">Estado</th></tr></thead>
-              <tbody id="tablaCatalogo"></tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-
-      <div class="col-xl-8">
-        <section class="tarjeta" aria-labelledby="tEventos">
-          <div class="tarjeta-h">
-            <h2 id="tEventos">Eventos WebSocket</h2>
-            <div class="d-flex flex-wrap gap-2">
-              <label class="visually-hidden" for="selFiltro">Filtrar eventos</label>
-              <select id="selFiltro" class="form-select form-select-sm w-auto">
-                <option value="todos">Todos</option>
-                <option value="movimiento">Movimientos individuales</option>
-                <option value="demo">DEMO</option>
-                <option value="estado">Estado</option>
-                <option value="error">Errores</option>
-              </select>
-              <button id="btnPausa" class="btn btn-sm btn-outline-light" type="button" aria-pressed="false">
-                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pause"/></svg> <span>Pausar</span>
-              </button>
-              <button id="btnLimpiar" class="btn btn-sm btn-outline-secondary" type="button">Limpiar</button>
-            </div>
-          </div>
-          <p class="ayuda mt-0">Canal: <code id="wsUrl"></code>. Un evento indica que la API lo registró y difundió, no que el vehículo lo ejecutó.</p>
-          <div class="table-responsive tabla-alta">
-            <table class="table table-sm table-hover align-middle mb-0 tabla-eventos">
-              <thead><tr>
-                <th scope="col">Recibido</th><th scope="col">Evento</th><th scope="col">Comando</th>
-                <th scope="col">Código</th><th scope="col">Servidor</th><th scope="col">Detalle</th>
-              </tr></thead>
-              <tbody id="tablaEventos"></tbody>
-            </table>
-          </div>
-          <p id="eventosVacio" class="vacio mt-2 mb-0">Esperando eventos…</p>
-        </section>
-      </div>
+      <!-- 4. Últimos diez movimientos persistidos -->
+      <section class="tarjeta historial" aria-labelledby="tHist">
+        <div class="tarjeta-h">
+          <h2 id="tHist">Últimos 10 movimientos</h2>
+          <button id="btnHistorial" class="btn btn-sm btn-outline-info btn-icono" type="button" aria-describedby="histEstado">
+            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-sync"/></svg><span>Actualizar</span>
+          </button>
+        </div>
+        <p id="histEstado" class="hist-estado" aria-live="polite">Cargando historial…</p>
+        <div class="tabla-mov-caja">
+          <table class="tabla-mov" aria-describedby="histNota">
+            <caption class="visually-hidden">Últimos diez movimientos individuales guardados en la base de datos, del más reciente al más antiguo</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="c-num">#</th>
+                <th scope="col" class="c-mov">Movimiento</th>
+                <th scope="col" class="c-fecha">Fecha</th>
+                <th scope="col" class="c-hora">Hora</th>
+                <th scope="col" class="c-cod">Código</th>
+                <th scope="col" class="c-ori">Origen</th>
+              </tr>
+            </thead>
+            <tbody id="tablaMov"></tbody>
+          </table>
+        </div>
+        <p id="histNota" class="ayuda mb-0">Movimientos individuales guardados en RDS (GET /historial). Los pasos de DEMO no se guardan aquí. Lo que sale de la lista sigue en la base de datos.</p>
+      </section>
     </div>
+
+    <!-- Diagnóstico (plegado) -->
+    <details class="tarjeta mon-eventos">
+      <summary><span>Registro técnico de eventos WebSocket</span><small id="cntEventos">0 eventos</small></summary>
+      <div class="tarjeta-h mt-3">
+        <p class="ayuda m-0">Canal: <code id="wsUrl"></code>. Un evento indica que la API lo registró y difundió, no que el vehículo lo ejecutó.</p>
+        <div class="d-flex flex-wrap gap-2">
+          <label class="visually-hidden" for="selFiltro">Filtrar eventos</label>
+          <select id="selFiltro" class="form-select form-select-sm w-auto">
+            <option value="todos">Todos</option>
+            <option value="movimiento">Movimientos individuales</option>
+            <option value="demo">DEMO</option>
+            <option value="estado">Estado</option>
+            <option value="error">Errores</option>
+          </select>
+          <button id="btnPausa" class="btn btn-sm btn-outline-light" type="button" aria-pressed="false">
+            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pause"/></svg> <span>Pausar</span>
+          </button>
+          <button id="btnLimpiar" class="btn btn-sm btn-outline-secondary" type="button">Limpiar</button>
+        </div>
+      </div>
+      <div class="table-responsive tabla-alta">
+        <table class="table table-sm table-hover align-middle mb-0 tabla-eventos">
+          <caption class="visually-hidden">Eventos recibidos por el WebSocket en esta sesión</caption>
+          <thead><tr>
+            <th scope="col">Recibido</th><th scope="col">Evento</th><th scope="col">Comando</th>
+            <th scope="col">Código</th><th scope="col">Servidor</th><th scope="col">Detalle</th>
+          </tr></thead>
+          <tbody id="tablaEventos"></tbody>
+        </table>
+      </div>
+      <p id="eventosVacio" class="vacio mt-2 mb-0">Esperando eventos…</p>
+    </details>
   </main>
 
   <footer class="pie">

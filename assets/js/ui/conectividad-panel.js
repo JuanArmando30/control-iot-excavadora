@@ -6,9 +6,9 @@ import { el, icono } from "./dom.js";
 import { NIVEL } from "../domain/conectividad-service.js";
 
 const ITEMS = [
-  { clave: "ws", nombre: "WebSocket WSS", corto: "WSS", mini: "WSS", ic: "i-wifi", sub: "Sesión en vivo de este navegador" },
-  { clave: "api", nombre: "Servidor AWS", corto: "AWS API", mini: "AWS", ic: "i-server", sub: "API FastAPI · 21 procedimientos" },
-  { clave: "rds", nombre: "Amazon RDS", corto: "RDS", mini: "RDS", ic: "i-db", sub: "Diagnóstico seguro del backend" },
+  { clave: "ws", nombre: "WebSocket WSS", corto: "WSS", mini: "WSS", ic: "i-wifi", sub: "Conexión real de este navegador (una por navegador)" },
+  { clave: "api", nombre: "API AWS · 21 servicios", corto: "API AWS", mini: "AWS", ic: "i-server", sub: "GET /health: el proceso responde (no prueba cada servicio)" },
+  { clave: "rds", nombre: "Amazon RDS", corto: "RDS", mini: "RDS", ic: "i-db", sub: "GET /health/db: diagnóstico real del backend" },
 ];
 const NOTA_FISICO = "Vehículo físico: sin confirmación del ESP32. WSS y API en línea no significan que el carrito esté conectado.";
 

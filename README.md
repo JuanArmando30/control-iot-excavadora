@@ -5,7 +5,7 @@ Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, s
 | Sección | Archivo | Qué hace | ¿Clave? |
 |---|---|---|---|
 | **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido, **Demo** y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 5 modos de manejo (Pulso, Joystick, Voz, Giroscopio e IA con gestos de la mano) | Operador |
-| **Monitoreo** | `monitoreo.html` | Conectividad, estado registrado, DEMO (seleccionar, iniciar, cancelar, avance), historial, catálogo y eventos WSS | Consultar: no · DEMO: Operador |
+| **Monitoreo** | `monitoreo.html` | Nombre del vehículo, indicadores WSS · API AWS · Amazon RDS, tarjeta destacada del **último movimiento reportado** (en vivo por WSS) y tabla de los **últimos 10 movimientos** persistidos; registro técnico de eventos WSS plegado | No (solo lectura) |
 | **Administración / Configuración** | `administracion.html` | Vehículos, comandos, DEMO y sus pasos (endpoints existentes); configuración y clave | Operador (eliminar: Admin) |
 
 Backend existente (no se modifica su lógica ni los 21 procedimientos): FastAPI en Amazon EC2 + Amazon RDS MySQL.
@@ -26,13 +26,14 @@ Backend existente (no se modifica su lógica ni los 21 procedimientos): FastAPI 
 ┌───────────────────────── Navegador (GitHub Pages, HTTPS) ─────────────────────────┐
 │  pages/  control.js · monitoreo.js · administracion.js   ← conectan vista y dominio│
 │     │                                                                              │
-│  ui/     joystick · botonera · voz · demo-panel · conectividad-panel · modales     │
+│  ui/     joystick · botonera · voz · gestos · conectividad-panel · modales         │
 │     │        (solo DOM, eventos y estados visuales; nada de fetch)                 │
 │  domain/ ComandoService (único envío) · Catalogo · DemoService ·                   │
-│          ConectividadService · interprete-voz                                      │
+│          ConectividadService · interprete-voz · monitoreo-estado                   │
 │     │                                                                              │
 │  api/    vehiculo-api.js  (rutas reales + validación de cada respuesta)            │
 │  core/   http-client (fetch, timeout, errores) · ws-client (WSS, reconexión) ·     │
+│          ws-compartido (UNA conexión por navegador, compartida entre pestañas) ·   │
 │          validadores (JSON no confiable) · clave-store (X-API-Key del usuario)     │
 └───────────────┬──────────────────────────────────────────┬────────────────────────┘
           HTTPS │ GET consulta / POST acción              │ WSS (eventos)
@@ -44,7 +45,13 @@ Backend existente (no se modifica su lógica ni los 21 procedimientos): FastAPI 
 
 **DEMO:** `POST /vehiculos/1/demos/{id}/iniciar` → 202 → el backend emite `demo_iniciada`, N × `demo_movimiento`, `demo_finalizada` (o `demo_cancelada`). El navegador no conoce ni reproduce los pasos.
 
-**Conectividad:** WSS = eventos `open/close/error` del socket + latido `ping/pong`; API = `GET /health`; RDS = `GET /health/db` (si la API no responde, RDS queda *Sin verificar*). Ninguno marca al vehículo físico como conectado.
+**Conectividad:** WSS = eventos `open/close/error` del socket real + latido `ping/pong` (En línea / Conectando · Reconectando / Desconectado); API AWS · 21 servicios = `GET /health` cada 30 s con timeout de 8 s (Disponible / Comprobando / No disponible); RDS = `GET /health/db` (Disponible / No disponible / Sin verificar: si la API no responde no se puede concluir). Ninguno marca al vehículo físico como conectado; una falla WSS no prueba que AWS o RDS estén caídos, y `/health` correcto no garantiza las 21 operaciones.
+
+**Una conexión WSS compartida (`core/ws-compartido.js`):** Control y Monitoreo usan la misma conexión cuando están abiertos en pestañas del mismo navegador. Las pestañas compiten por un candado (Web Locks API); la que lo obtiene abre la conexión real y retransmite estado y eventos a las demás por `BroadcastChannel`. Si se cierra, otra pestaña toma el relevo (reconexión + resincronización por REST); si queda congelada en segundo plano (sin latidos ~7 s), una pestaña visible le quita el candado. Al navegar dentro de la misma pestaña la página se descarga y la conexión se reabre (sitio de varias páginas). Sin esas API, cada pestaña abre la suya.
+
+**Monitoreo (`pages/monitoreo.js` + `domain/monitoreo-estado.js`):**
+- *Último movimiento reportado:* `GET /estado` al entrar y al (re)conectar; después cada evento WSS válido del mismo vehículo (`movimiento_individual`, `estado_inicial`/`estado_actualizado`, `demo_movimiento`), también de otras sesiones. Solo se acepta un dato con marca temporal del servidor **más reciente** que el mostrado: un evento repetido o retrasado y una respuesta REST lenta no sobrescriben lo nuevo. «Reportado» ≠ «ejecutado físicamente» (el ESP32 no confirma). Sin datos: «Sin movimientos»; sin WSS: «Último valor conocido · sin datos actualizados»; nunca se inventa fecha/hora. Los pasos de DEMO actualizan la tarjeta (marcados como DEMO) pero no la tabla.
+- *Últimos 10 movimientos:* solo `GET /historial` (persistidos en RDS), del más reciente al más antiguo, máx. 10, sin duplicados (`id_historial`). Un `movimiento_individual` por WSS programa una consulta agrupada (600 ms) y nunca dos a la vez; respuestas fuera de orden se descartan. Estados de carga, vacío, error (con «Reintentar») y «se muestran los datos anteriores». En teléfono la tabla muestra #, Movimiento (con el código debajo), Fecha y Hora sin desplazamiento horizontal; Código y Origen aparecen desde 576 px. Lo que sale de la lista sigue en RDS.
 
 ## 2. Estructura
 
@@ -61,10 +68,10 @@ control-vehiculo-iot/
 │   ├── site.webmanifest
 │   └── js/
 │       ├── config.js              URL base, WSS, rutas, vehículo, tiempos, mandos, interruptores, acceso de prueba
-│       ├── core/                  http-client · ws-client · validadores · clave-store
+│       ├── core/                  http-client · ws-client · ws-compartido · validadores · clave-store
 │       ├── api/vehiculo-api.js    Una función por endpoint real
-│       ├── domain/                catalogo · comando-service · demo-service · demo-preferida · conectividad-service · interprete-voz · interprete-gestos
-│       ├── ui/                    dom · joystick · giroscopio · gestos · botonera · voz · carga · demo-visor · demo-panel · conectividad-panel · modales · clave-dialog
+│       ├── domain/                catalogo · comando-service · demo-service · demo-preferida · conectividad-service · interprete-voz · interprete-gestos · monitoreo-estado
+│       ├── ui/                    dom · joystick · giroscopio · gestos · botonera · voz · carga · demo-visor · conectividad-panel · modales · clave-dialog
 │       └── pages/                 comun · control · monitoreo · administracion
 └── docs/
     ├── PRUEBAS.md             Casos de prueba paso a paso

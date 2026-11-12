@@ -624,24 +624,6 @@ body {
 .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .chip { flex: none; min-height: 32px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--panel-borde); background: #0b1636; color: var(--texto); font-size: .78rem; }
 
-/* --------------------------------- DEMO --------------------------------- */
-.progress { height: 10px; background: #0a1434; border: 1px solid var(--panel-borde); }
-.barra-demo { background: linear-gradient(90deg, var(--violeta), var(--acento)); transition: width .3s; }
-.progreso-paso { height: 6px; margin-top: 6px; }
-.barra-paso { background: linear-gradient(90deg, #34e0a8, #46d3ff); width: 0; }
-
-.contadores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
-.contadores div { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border-radius: 12px; background: #0a1434; border: 1px solid var(--panel-borde); }
-.contadores strong { font-size: 1.2rem; color: var(--acento); }
-.contadores span { font-size: .68rem; color: var(--tenue); text-align: center; }
-
-/* ------------------------------- Registros ------------------------------ */
-.registro { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow: auto; font-size: .82rem; }
-.registro li { display: flex; flex-wrap: wrap; gap: 2px 8px; padding: 7px 2px; border-bottom: 1px solid #1a2a5e; }
-.registro time { color: var(--tenue); font-family: ui-monospace, Consolas, monospace; font-size: .76rem; }
-.reg-etq { color: var(--acento); font-weight: 700; }
-.reg-txt { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
-
 .tabla-alta { max-height: 420px; overflow: auto; }
 .table { --bs-table-bg: transparent; --bs-table-color: var(--texto); font-size: .86rem; }
 .tabla-eventos .detalle { min-width: 220px; overflow-wrap: anywhere; }
@@ -649,6 +631,137 @@ body {
 .acciones .btn { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; min-width: 36px; justify-content: center; margin-left: 4px; }
 .badge.ev-movimiento { background: #1f7a5e; } .badge.ev-demo { background: #4b3aa8; }
 .badge.ev-estado { background: #2a4a8f; } .badge.ev-error { background: #a8344f; } .badge.ev-sistema { background: #3a4466; }
+
+/* ==========================================================================
+   MONITOREO · vehículo, conectividad, último movimiento y diez movimientos
+   ========================================================================== */
+.monitoreo { display: flex; flex-direction: column; gap: 12px; }
+.monitoreo > .conn { margin-bottom: 0; }
+
+.mon-vehiculo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mon-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0;
+  font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--acento);
+}
+.mon-eyebrow .ico { width: 1.1em; height: 1.1em; }
+.mon-nombre { margin: 0; font-size: clamp(1.45rem, 5.5vw, 2.1rem); font-weight: 800; line-height: 1.15; color: #fff; overflow-wrap: anywhere; }
+.mon-info { margin: 0; font-size: .86rem; color: var(--tenue); overflow-wrap: anywhere; }
+
+.mon-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 992px) {
+  .mon-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; }
+}
+
+/* ---- Insignia de frescura (texto + icono + color: nunca solo color) ---- */
+.frescura {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 10px; border-radius: 99px;
+  font-size: .76rem; font-weight: 700; line-height: 1.2; border: 1px solid currentColor; background: #0a1434;
+}
+.frescura .ico { width: 1.05em; height: 1.05em; flex: none; }
+.frescura[data-tipo="ok"] { color: var(--ok); }
+.frescura[data-tipo="medio"] { color: var(--medio); }
+.frescura[data-tipo="mal"] { color: var(--mal); }
+.frescura[data-tipo="neutro"] { color: var(--neutro); border-style: dashed; }
+
+/* ---- Tarjeta del último movimiento ---- */
+.ultimo { position: relative; overflow: hidden; border-color: #2d4c9c; }
+.ultimo::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 4px;
+  background: linear-gradient(90deg, var(--acento), var(--violeta));
+}
+.ultimo[data-estado="demo"]::before { background: linear-gradient(90deg, #8a7cff, #b3a8ff); }
+.ultimo[data-estado="vacio"]::before, .ultimo[data-estado="cargando"]::before { background: #2a3c74; }
+.ultimo.recien { animation: ultimo-recien 1.1s ease; }
+@keyframes ultimo-recien { 0% { box-shadow: 0 0 0 2px var(--acento), 0 0 34px #46d3ff88; } 100% { box-shadow: 0 10px 30px #0006; } }
+
+.ult-cuerpo { display: flex; align-items: center; gap: 14px; min-width: 0; margin-bottom: 14px; }
+.ult-ico {
+  flex: none; width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; color: #fff;
+  background: radial-gradient(circle at 35% 28%, #9be8ff, #2f78ff 55%, #1b2f93); box-shadow: 0 0 22px #46d3ff55;
+}
+.ult-ico .ico { width: 32px; height: 32px; stroke-width: 2.4; }
+.ult-ico[data-paro="true"] { background: radial-gradient(circle at 35% 28%, #ffb3c1, #e0405f 55%, #8a1a33); box-shadow: 0 0 22px #ff6b8455; }
+.ultimo[data-estado="demo"] .ult-ico { background: radial-gradient(circle at 35% 28%, #ece6ff, #8a7cff 55%, #4b3aa8); box-shadow: 0 0 22px #8a7cff66; }
+.ultimo[data-estado="vacio"] .ult-ico, .ultimo[data-estado="cargando"] .ult-ico { background: #13224f; box-shadow: none; color: var(--tenue); }
+.ult-txt { min-width: 0; }
+.ult-mov { margin: 0; font-size: clamp(1.4rem, 6vw, 1.9rem); font-weight: 800; line-height: 1.1; color: #fff; overflow-wrap: anywhere; }
+.ult-tipo { margin: 4px 0 0; font-size: .82rem; color: var(--tenue); }
+
+.ult-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.ult-datos > div { min-width: 0; padding: 8px 10px; border-radius: 12px; background: #0a1434; border: 1px solid #1a2a60; }
+.ult-datos dt { font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--tenue); }
+.ult-datos dd { margin: 2px 0 0; font-size: .98rem; font-weight: 700; color: var(--texto); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.ult-nota { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; font-size: .78rem; color: var(--tenue); }
+.ult-nota .ico { flex: none; width: 1.1em; height: 1.1em; margin-top: 2px; }
+.ult-nota strong { color: var(--texto); }
+@media (min-width: 576px) and (max-width: 991.98px) { .ult-datos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---- Tabla de los diez movimientos: sin desplazamiento horizontal de la página ---- */
+.btn-icono { display: inline-flex; align-items: center; gap: 6px; }
+.hist-estado { margin: -4px 0 8px; font-size: .78rem; color: var(--tenue); }
+.hist-estado::before { margin-right: 4px; font-weight: 800; }
+.hist-estado[data-tipo="ok"]::before { content: "✓"; color: var(--ok); }
+.hist-estado[data-tipo="medio"]::before { content: "↻"; color: var(--medio); }
+.hist-estado[data-tipo="mal"]::before { content: "✕"; color: var(--mal); }
+.hist-estado[data-tipo="mal"] { color: #ffc2cd; }
+
+.tabla-mov-caja { border: 1px solid #1a2a60; border-radius: 14px; overflow: hidden; }
+.tabla-mov { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .9rem; }
+.tabla-mov th, .tabla-mov td { padding: 9px 8px; border-bottom: 1px solid #1a2a5e; vertical-align: middle; text-align: left; }
+.tabla-mov tbody tr:last-child > * { border-bottom: 0; }
+.tabla-mov thead th {
+  position: sticky; top: 0; background: #0c1945; font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--tenue);
+}
+.tabla-mov tbody tr:nth-child(even) { background: #0a143466; }
+.tabla-mov .c-num { width: 2.6em; text-align: right; color: var(--tenue); font-variant-numeric: tabular-nums; }
+.tabla-mov .c-fecha { width: 7.9em; }
+.tabla-mov .c-hora { width: 5.6em; }
+.tabla-mov .c-cod { width: 5.8em; text-align: right; font-variant-numeric: tabular-nums; }
+.tabla-mov .c-ori { width: 7.5em; }
+.tabla-mov td.c-ori { color: var(--tenue); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabla-mov td.c-fecha, .tabla-mov td.c-hora { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabla-mov tbody th.c-mov { font-weight: 700; color: #fff; }
+.mov-nombre { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mov-cod-movil { display: none; font-size: .72rem; font-weight: 600; color: var(--tenue); }
+.tabla-mov tr.nueva { animation: fila-nueva 2.4s ease; }
+.tabla-mov tr.nueva > :first-child { animation: fila-nueva-borde 2.4s ease; }
+@keyframes fila-nueva { 0% { background: #1d4a8a; } 100% { background: transparent; } }
+@keyframes fila-nueva-borde { 0%, 70% { box-shadow: inset 4px 0 0 var(--acento); } 100% { box-shadow: inset 4px 0 0 transparent; } }
+.tabla-msg { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 8px; text-align: center; color: var(--tenue); }
+.tabla-msg .ico { width: 28px; height: 28px; }
+.tabla-msg strong { color: var(--texto); }
+.fila-error .tabla-msg .ico, .fila-error .tabla-msg strong { color: var(--mal); }
+
+/* Teléfono: lo esencial (#, movimiento, fecha, hora); el código pasa bajo el nombre y el origen se oculta. */
+@media (max-width: 575.98px) {
+  .tabla-mov { font-size: .8rem; }
+  .tabla-mov th, .tabla-mov td { padding: 8px 4px; }
+  .tabla-mov .c-num { width: 1.9em; padding-right: 6px; }
+  .tabla-mov .c-fecha { width: 7.6em; }
+  .tabla-mov .c-hora { width: 5.6em; }
+  .tabla-mov thead th { font-size: .64rem; letter-spacing: .05em; }
+  .tabla-mov .c-cod, .tabla-mov .c-ori { display: none; }
+  .mov-cod-movil { display: block; }
+}
+@media (min-width: 992px) and (max-width: 1199.98px) { .tabla-mov .c-ori { display: none; } }
+
+/* ---- Registro técnico plegado ---- */
+.mon-eventos > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; cursor: pointer;
+  font-size: .9rem; font-weight: 700; color: var(--acento); list-style: none;
+}
+.mon-eventos > summary::-webkit-details-marker { display: none; }
+.mon-eventos > summary::before { content: "▸"; transition: transform .15s; }
+.mon-eventos[open] > summary::before { transform: rotate(90deg); }
+.mon-eventos > summary span { flex: 1 1 auto; }
+.mon-eventos > summary small { color: var(--tenue); font-weight: 600; }
+
+/* Tamaños táctiles en pantallas táctiles */
+@media (pointer: coarse) {
+  .monitoreo .btn-sm, .conn-btn { min-height: 44px; }
+  .monitoreo .form-select-sm { min-height: 44px; }
+}
 
 /* --------------------------------- Avisos ------------------------------- */
 .toasts {

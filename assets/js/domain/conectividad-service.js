@@ -4,7 +4,9 @@
  *  - API AWS: GET /health (proceso FastAPI vivo; existe en sistema.py).
  *  - Amazon RDS: GET /health/db (el backend ejecuta SELECT 1; 503 si falla).
  *    Si la API no responde, RDS queda "Sin verificar": no se puede concluir.
- * Ninguno equivale a "vehículo físico en línea".
+ * Ninguno equivale a "vehículo físico en línea". Una falla del WSS no prueba
+ * que AWS o RDS estén caídos, y /health correcto no garantiza que cada una de
+ * las 21 operaciones de la API funcione.
  */
 import { WS } from "../core/ws-client.js";
 import { salud as esSaludOk } from "../core/validadores.js";
@@ -43,7 +45,7 @@ export class ConectividadService extends EventTarget {
   actualizarWs(estado, detalle) {
     if (estado === WS.ABIERTO) this._set("ws", NIVEL.OK, "En línea", detalle);
     else if (estado === WS.CONECTANDO) this._set("ws", NIVEL.MEDIO, "Conectando", detalle);
-    else if (estado === WS.RECONECTANDO) this._set("ws", NIVEL.MEDIO, "Reconectando", detalle);
+    else if (estado === WS.RECONECTANDO || estado === WS.ESPERANDO) this._set("ws", NIVEL.MEDIO, "Reconectando", detalle);   // reintento programado
     else this._set("ws", NIVEL.MAL, "Desconectado", detalle);
   }
 

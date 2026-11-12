@@ -118,16 +118,27 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 | MC9 | Inicia una DEMO y recorre los 5 modos mientras corre | El mando queda atenuado y **solo brilla lo que hace cada paso**, durante lo que dura: Pulso = el botón de la cruceta (o de brazo/pala, o el accesorio); Joystick = la perilla se desplaza hacia la dirección; Giro = el teléfono dibujado se inclina y se ilumina la etiqueta (brazo/pala: la botonera 2×2); Voz = tarjeta «Paso n de N · acción»; IA = fila del gesto y su dirección en la guía, y la flecha sobre la cámara al conducir. DETENER de la DEMO hace destellar el botón DETENER. La banda superior muestra «DEMO «…» · paso n/N · acción» con barra de avance. Al terminar todo vuelve a la normalidad |
 | MC8 | Teléfono horizontal estrecho (p. ej. 640×360) | Si Luz · Sonido · On/Off · Demo no caben en una fila, Demo pasa abajo **centrada** |
 
-**Desde Monitoreo:**
+**Vista desde Monitoreo (las DEMO se inician en Control):**
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
-| M1 | Abre Monitoreo | La lista se llena con `GET /vehiculos/1/demos` (solo activas) |
-| M2 | Inicia una DEMO desde Monitoreo con Control abierto en otro dispositivo | 202; barra de avance según `demo_movimiento`; en Control el mando se bloquea y DETENER la cancela |
-| M3 | Intenta iniciar otra durante la ejecución | Botón deshabilitado; si se fuerza, la API responde 409 y la página se resincroniza |
-| M4 | Deja terminar | `demo_finalizada`; controles habilitados de nuevo |
-| M5 | Cuenta el historial (Monitoreo) antes y después | No cambia: los pasos de DEMO no se guardan |
-| M6 | Recarga la página a mitad de una DEMO | `GET …/demos/ejecucion` recupera el estado |
+| M1 | Inicia una DEMO en Control con Monitoreo abierto | La tarjeta muestra cada paso: «Paso n de N de la DEMO «…» · no se guarda en el historial» |
+| M2 | Cuenta las filas de la tabla antes y después | No cambian: los pasos de DEMO no se guardan en el historial |
+
+## MO · Monitoreo
+
+| # | Pasos | Resultado esperado |
+|---|---|---|
+| MO1 | Abre Monitoreo | Nombre real del vehículo (GET /vehiculos/1), indicadores WSS · API AWS · RDS, tarjeta y tabla con «Cargando…» y luego datos reales |
+| MO2 | Vehículo sin movimientos | Tarjeta «Sin movimientos», tabla «Sin movimientos»; ninguna fila de ejemplo ni fecha inventada |
+| MO3 | Mueve el carrito desde Control en **otro dispositivo** | Sin recargar: la tarjeta cambia a ese movimiento («En vivo», origen, fecha y hora del servidor) y la fila aparece arriba resaltada; máx. 10 filas, sin duplicados |
+| MO4 | Ráfaga de órdenes (joystick) | La tabla se actualiza con **una** consulta agrupada por ráfaga (pestaña Red: no hay una GET /historial por cada orden) |
+| MO5 | Corta la red unos segundos | WSS «Reconectando», tarjeta «Último valor conocido · sin datos actualizados» con la fecha original; al volver: resincroniza estado y tabla |
+| MO6 | DevTools → Red: bloquea `/historial` y pulsa «Actualizar» | «No se pudo actualizar…» y se conservan los datos anteriores (✕ + texto, no solo color). Sin datos previos: mensaje de error con «Reintentar» |
+| MO7 | Teléfono vertical 360 px, horizontal y escritorio | Sin desplazamiento horizontal de la página; en teléfono se ven #, Movimiento, Fecha y Hora; Código y Origen desde 576 px |
+| MO8 | Solo teclado | «Saltar al contenido», menú, «Comprobar», «Actualizar» y el registro técnico con foco visible; Enter/Espacio los activan |
+| MO9 | Abre Control y Monitoreo en dos pestañas | **Una sola** conexión WSS (en DevTools → Red → WS, solo una pestaña la tiene); la otra muestra «… conexión compartida con otra pestaña». Cierra la que la tiene: la otra toma el relevo en pocos segundos |
+| MO10 | Lector de pantalla | Anuncia «Nuevo movimiento reportado: …» y los cambios de conectividad |
 
 ## E · Errores y resiliencia
 

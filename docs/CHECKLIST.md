@@ -2,11 +2,13 @@
 
 ## Seguridad
 - [x] Página por HTTPS y socket por WSS; `HttpClient` y `WsClient` rechazan `http://` / `ws://` en una página HTTPS (sin mixed content).
+- [x] Una sola conexión WSS por navegador compartida entre pestañas (Web Locks + BroadcastChannel); solo se retransmiten eventos ya validados del mismo vehículo.
 - [x] Sin contraseñas, tokens, claves AWS ni datos de RDS en el repositorio; el navegador nunca habla con MySQL.
 - [x] `X-API-Key` escrita por el usuario, validada con `GET /sesion`, en `sessionStorage` por defecto.
 - [ ] **Pendiente al terminar las pruebas:** desactivar `accesoLibre` en `assets/js/config.js`, borrar la clave de prueba del archivo y cambiarla en el backend (mientras esté activo, la clave es pública).
 - [x] CORS del backend limitado al origen de GitHub Pages, métodos GET/POST y cabeceras `Content-Type`, `X-API-Key`, sin credenciales. CORS no se usa como autenticación.
-- [x] Content-Security-Policy: scripts solo propios y de jsDelivr (con SRI), `connect-src` limitado a la API, sin `unsafe-inline`.
+- [x] Content-Security-Policy: scripts solo propios y de jsDelivr (con SRI), `connect-src` limitado a la API, sin `unsafe-inline`. En Control además `'wasm-unsafe-eval'` y jsDelivr en `connect-src` para MediaPipe (modo IA, versión fija 0.10.35), y `media-src blob: mediastream:` para la cámara.
+- [x] Modo IA: el video se procesa solo en el dispositivo (no se graba ni se envía); la cámara se apaga al pausar, cambiar de modo u ocultar la pestaña. Dead-man: sin puño o victoria no hay movimiento.
 - [x] JSON remoto validado y reducido a campos conocidos (`validadores.js`); eventos WSS de otro vehículo se descartan.
 - [x] Sin `innerHTML`: todo el texto remoto se inserta con `textContent` (sin inyección DOM).
 - [x] `fetch` con `credentials: "omit"`, `referrerPolicy: "no-referrer"`, rutas restringidas al origen de la API.
