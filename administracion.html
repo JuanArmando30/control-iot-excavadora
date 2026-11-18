@@ -21,7 +21,7 @@
           integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
   <script type="module" src="assets/js/pages/administracion.js"></script>
 </head>
-<body>
+<body class="pagina-control pagina-admin">
   <div class="carga" aria-hidden="true">
     <div class="carga-in">
       <div class="carga-logo"><img src="assets/icons/icon-192.png" alt="" width="96" height="96"></div>
@@ -41,33 +41,23 @@
         <img src="assets/icons/icon-192.png" alt="" width="40" height="40">
         <span class="marca-txt"><strong>Excavadora IoT</strong><small>Administración y configuración</small></span>
       </a>
+      <div class="menu">
       <nav class="nav-sec" aria-label="Secciones">
         <a href="index.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Control</span></a>
         <a href="monitoreo.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pulse"/></svg><span>Monitoreo</span></a>
         <a href="administracion.html" aria-current="page" aria-label="Administración"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gear"/></svg><span class="lbl-largo">Administración</span><span class="lbl-corto" aria-hidden="true">Admin</span></a>
       </nav>
+      <div id="panelConectividad" class="estado-barra"></div>
+      </div>
       <button id="btnClave" class="btn btn-sm btn-outline-warning btn-clave" type="button">
         <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-key"/></svg><span>Sin clave</span>
       </button>
     </div>
   </header>
 
-  <main id="contenido" class="container-xl contenido">
-    <h1 class="titulo-pagina">Administración y configuración</h1>
-
-    <div class="row g-3">
-      <div class="col-lg-4">
-        <section class="tarjeta" aria-labelledby="tConfig">
-          <div class="tarjeta-h"><h2 id="tConfig">Configuración</h2></div>
-          <p id="estadoClave" class="aviso aviso-info"></p>
-          <dl id="dlConfig" class="kv kv-config"></dl>
-          <p class="ayuda">La configuración se edita en <code>assets/js/config.js</code>; no contiene secretos.</p>
-          <a id="lnkDocs" class="btn btn-sm btn-outline-info" href="#" target="_blank" rel="noopener noreferrer">Abrir Swagger (/docs)</a>
-        </section>
-      </div>
-
-      <div class="col-lg-8">
-        <section class="tarjeta" aria-labelledby="tGestion">
+  <main id="contenido" class="container-xl contenido contenido-admin">
+    <h1 class="visually-hidden">Administración y configuración</h1>
+    <section class="tarjeta admin" aria-labelledby="tGestion">
           <div class="tarjeta-h">
             <h2 id="tGestion">Gestión de datos</h2>
             <div class="d-flex gap-2 align-items-center">
@@ -88,6 +78,9 @@
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="tab-demo" data-bs-toggle="tab" data-bs-target="#pnl-demo" type="button" role="tab" aria-controls="pnl-demo" aria-selected="false">DEMO</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-conf" data-bs-toggle="tab" data-bs-target="#pnl-conf" type="button" role="tab" aria-controls="pnl-conf" aria-selected="false">Configuración</button>
             </li>
           </ul>
 
@@ -135,6 +128,8 @@
                   <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Nueva
                 </button>
               </div>
+              <div class="demo-bloques">
+              <div class="demo-bloque">
               <div class="table-responsive">
                 <table class="table table-sm align-middle">
                   <thead><tr>
@@ -144,8 +139,10 @@
                   <tbody id="tbDemos"></tbody>
                 </table>
               </div>
+              </div>
+              <div class="demo-bloque">
 
-              <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-2">
                 <h3 id="tituloMovimientos" class="subtitulo m-0">Movimientos de la DEMO</h3>
                 <button id="btnNuevoMovimiento" class="btn btn-sm btn-primary" type="button" disabled>
                   <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Paso
@@ -161,11 +158,20 @@
                   <tbody id="tbMovimientos"></tbody>
                 </table>
               </div>
+              </div>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="pnl-conf" role="tabpanel" aria-labelledby="tab-conf" tabindex="0">
+              <div class="conf-pane">
+              <p id="estadoClave" class="aviso aviso-info"></p>
+              <dl id="dlConfig" class="kv kv-config"></dl>
+              <p class="ayuda">La configuración se edita en <code>assets/js/config.js</code>; no contiene secretos.</p>
+              <a id="lnkDocs" class="btn btn-sm btn-outline-info" href="#" target="_blank" rel="noopener noreferrer">Abrir Swagger (/docs)</a>
+              </div>
             </div>
           </div>
-        </section>
-      </div>
-    </div>
+    </section>
   </main>
 
   <footer class="pie">

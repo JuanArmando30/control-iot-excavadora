@@ -6,7 +6,7 @@ Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, s
 |---|---|---|---|
 | **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido, **Demo** y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 6 modos de manejo (Pulso, Joystick, Voz, Giroscopio, IA con gestos de la mano y Táctil) | Operador |
 | **Monitoreo** | `monitoreo.html` | Nombre del vehículo, indicadores WSS · API AWS · Amazon RDS, tarjeta destacada del **último movimiento reportado** (en vivo por WSS) y tabla de los **últimos 10 movimientos** persistidos; registro técnico de eventos WSS plegado | No (solo lectura) |
-| **Administración / Configuración** | `administracion.html` | Vehículos, comandos, DEMO y sus pasos (endpoints existentes); configuración y clave | Operador (eliminar: Admin) |
+| **Administración / Configuración** | `administracion.html` | Una sola pantalla sin scroll (solo se desplazan las tablas, con encabezado fijo): pestañas Vehículos, Comandos, DEMO (lista y pasos lado a lado en pantallas anchas) y Configuración; indicadores WSS · AWS · RDS en el menú, como en Control (misma conexión WSS compartida) | Operador (eliminar: Admin) |
 
 Backend existente (no se modifica su lógica ni los 21 procedimientos): FastAPI en Amazon EC2 + Amazon RDS MySQL.
 

@@ -1000,6 +1000,49 @@ body {
   .stop .ico { width: 22px; height: 22px; }
 }
 
+/* ==========================================================================
+   ADMINISTRACIÓN · una sola pantalla sin scroll: solo se desplazan las tablas
+   ========================================================================== */
+.contenido-admin {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  padding-top: 10px; padding-bottom: 10px; max-width: 1200px;
+}
+.tarjeta.admin { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 12px; }
+.admin > .tarjeta-h { margin-bottom: 8px; }
+.admin > .tarjeta-h .form-select { min-width: 0; max-width: 220px; }
+.admin .nav-tabs { flex: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.admin .nav-tabs::-webkit-scrollbar { display: none; }
+.admin .nav-tabs .nav-link { white-space: nowrap; padding: 6px 12px; }
+.admin .tab-content { flex: 1 1 auto; min-height: 0; padding-top: 10px !important; }
+.admin .tab-pane.active { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.admin .tab-pane > .d-flex { flex: none; gap: 8px; }
+/* Las tablas ocupan el espacio que queda y se desplazan por dentro, con el encabezado fijo */
+.admin .table-responsive { flex: 1 1 auto; min-height: 0; overflow: auto; border: 1px solid #1a2a60; border-radius: 12px; }
+.admin .table { margin: 0; }
+.admin .table thead th { position: sticky; top: 0; z-index: 1; background: #0c1945; }
+/* DEMO: lista y pasos lado a lado en pantallas anchas; uno sobre otro en teléfono */
+.demo-bloques { flex: 1 1 auto; min-height: 0; display: grid; gap: 10px; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+.demo-bloque { min-height: 0; display: flex; flex-direction: column; }
+.demo-bloque > .d-flex, .demo-bloque > p { flex: none; }
+@media (min-width: 900px) {
+  .demo-bloques { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+}
+.conf-pane { flex: 1 1 auto; min-height: 0; overflow: auto; padding-right: 4px; }
+.conf-pane .aviso { margin-bottom: 10px; }
+@media (max-width: 575.98px) {
+  .tarjeta.admin { padding: 10px 8px; }
+  .admin > .tarjeta-h h2 { font-size: .85rem; }
+  .admin .nav-tabs .nav-link { padding: 6px 7px; font-size: .8rem; }
+  .admin .tab-pane > .d-flex .ayuda { font-size: .74rem; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .contenido-admin { padding-top: 6px; padding-bottom: 6px; }
+  .tarjeta.admin { padding: 8px 10px; }
+  .admin > .tarjeta-h { margin-bottom: 4px; }
+  .admin .tab-pane > .d-flex .ayuda { display: none; }
+  .admin .nav-tabs .nav-link { padding: 4px 10px; font-size: .85rem; }
+}
+
 /* Teléfonos bajos en vertical: la línea de estado cede su espacio a los mandos (los errores siguen saliendo como aviso) */
 @media (orientation: portrait) and (max-height: 700px) { .linea-estado { display: none; } }
 
@@ -1007,6 +1050,7 @@ body {
 @media (max-height: 600px) and (orientation: portrait) {
   .pagina-control { height: auto; min-height: 100dvh; overflow: auto; }
   .mando { flex: none; grid-template-rows: auto auto 210px auto auto; }
+  .pagina-admin .contenido-admin { flex: none; height: 520px; }
 }
 
 /* ------------------- Teléfono horizontal (poca altura) ------------------ */

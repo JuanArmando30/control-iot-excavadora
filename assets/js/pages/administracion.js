@@ -10,6 +10,7 @@ import { claveStore } from "../core/clave-store.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { abrirModal, campo, confirmar, leerFormulario } from "../ui/modales.js";
 import { $, el, icono, toast } from "../ui/dom.js";
+import { iniciarConectividad } from "./comun.js";
 
 let vehiculos = [];
 let vehiculoSel = CONFIG.vehiculoId;
@@ -278,7 +279,11 @@ $("btnNuevoMovimiento").addEventListener("click", async () => {
 $("btnRecargar").addEventListener("click", recargarTodo);
 claveStore.alCambiar(pintarClave);
 
+/* Indicadores WSS · AWS · RDS en el menú (igual que Control), con la conexión WSS compartida. */
+const { ws } = iniciarConectividad({ barra: true });
+
 (async function iniciar() {
+  ws.conectar();
   pintarConfiguracion();
   pintarClave();
   await inicializarClave();

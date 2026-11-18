@@ -175,6 +175,7 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 | R3 | Tableta y escritorio | Misma distribución mando · centro · mando; indicadores en una fila |
 | R4 | Teclado solo | Foco visible en todo; modos con Tab + Enter; flechas/WASD conducen, IJKL mueven brazo y pala |
 | R5 | Modo Giro en vertical y horizontal | Indicador del teléfono con Activar/Centrar a la izquierda, botonera 2×2 de brazo y pala a la derecha, accesorios y DETENER al centro; sin scroll |
+| R7 | Administración en teléfono vertical (360–412 px), horizontal y escritorio | Sin scroll de página: menú con indicadores WSS · AWS · RDS, pestañas Vehículos · Comandos · DEMO · Configuración visibles y pie abajo; las tablas se desplazan por dentro con el encabezado fijo. En DEMO, lista y pasos lado a lado desde 900 px |
 | R6 | Pantalla de carga | Al entrar o recargar: animación completa ~3.5 s. Al navegar entre Control, Monitoreo y Administración: versión corta ~1.8 s con «Abriendo <sección>». Siempre desaparece sola. Con «reducir movimiento» activado en el sistema no se muestra |
 
 ## W · Verificación independiente del WebSocket
