@@ -82,6 +82,7 @@ export const CONFIG = Object.freeze({
     teclado: "WEB_TECLADO",
     giroscopio: "WEB_GIROSCOPIO",
     ia: "WEB_IA",
+    tactil: "WEB_TACTIL",
   }),
 
   /**

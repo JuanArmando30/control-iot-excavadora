@@ -1,8 +1,8 @@
 /**
  * Página de CONTROL: mando horizontal con dos controles (conducción a la
  * izquierda, brazo y pala a la derecha), bloque central (luz, sonido,
- * encendido y DETENER), cinco modos de manejo (Pulso, Joystick, Voz,
- * Giroscopio e IA con gestos de la mano) y panel
+ * encendido y DETENER), seis modos de manejo (Pulso, Joystick, Voz,
+ * Giroscopio, IA con gestos de la mano y Táctil) y panel
  * de conectividad, todo en una sola pantalla.
  * El seguimiento (último movimiento e historial) está en Monitoreo. La DEMO se elige e inicia aquí y se
  * vigila para bloquear el mando mientras corre y para que DETENER la cancele.
@@ -22,6 +22,7 @@ import { ControlVoz, vozSoportada } from "../ui/voz.js";
 import { Giroscopio } from "../ui/giroscopio.js";
 import { DemoVisor } from "../ui/demo-visor.js";
 import { ControlGestos } from "../ui/gestos.js";
+import { Tactil } from "../ui/tactil.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, toast, vibrar, avisoEstado } from "../ui/dom.js";
 import { abrirModal } from "../ui/modales.js";
@@ -29,12 +30,13 @@ import { iniciarConectividad, pintarVehiculo } from "./comun.js";
 
 const V = CONFIG.vehiculoId;
 const O = CONFIG.origen;
-const MODOS = ["pulso", "joystick", "voz", "giro", "ia"];
+const MODOS = ["pulso", "joystick", "voz", "giro", "ia", "tactil"];
 const AYUDA = {
   pulso: "Pulso: cada toque envía una orden. Izquierda: conducción · derecha: brazo y pala.",
   joystick: "Joystick: arrastra una perilla (una a la vez); al soltar vuelve al centro y se envía DETENER.",
   voz: "Voz: habla con naturalidad; puedes encadenar órdenes con «y luego». Di «alto» para detener al instante.",
   giro: "Giroscopio: inclina el teléfono para conducir; el brazo, la pala y los accesorios van con botones (con el teléfono nivelado).",
+  tactil: "Táctil: desliza el dedo (o arrastra con el mouse) en línea recta; cada deslizamiento envía una orden. Brazo, pala y accesorios con botones.",
   ia: "IA: ✊ puño y mueve la mano para conducir, ✌️ victoria para brazo y pala, 👍 🤟 ☝️ sostenidos para luz, sonido y encendido. ✋ mano abierta = DETENER.",
 };
 const NOMBRE_MANDO = { conduccion: "Conducción", brazo: "Brazo y pala" };
@@ -90,6 +92,23 @@ $("btnGiro").addEventListener("click", () => {
 });
 $("btnCentrar").addEventListener("click", () => giroscopio.centrar());
 
+/** Modo Táctil: cada deslizamiento (dedo o mouse) envía un pulso de conducción. */
+const ETIQUETA_DIR = { arriba: "Avanzar", abajo: "Retroceder", izquierda: "Girar a la izquierda", derecha: "Girar a la derecha" };
+const tactilEstado = (txt, tipo = "") => { const p = $("tactilEstado"); p.textContent = txt; p.dataset.tipo = tipo; };
+const tactil = new Tactil($("tactil"), $("tactilLienzo"), {
+  onDeslizar: async (dir) => {
+    const cmd = catalogo.direccion(dir, "conduccion");
+    if (!cmd) return;
+    vibrar(15);
+    tactilEstado(`${ETIQUETA_DIR[dir]}: enviando…`);
+    const r = await enviar(cmd.codigo, O.tactil);
+    if (r?.ok) tactilEstado(`${ETIQUETA_DIR[dir]} ✓ · desliza otra vez para la siguiente orden.`, "ok");
+    else if (r) tactilEstado(`${ETIQUETA_DIR[dir]}: no se pudo enviar.`, "error");
+  },
+  onAviso: (txt) => tactilEstado(txt, "aviso"),
+  onBloqueado: () => explicarBloqueo(),
+});
+
 /** Modo IA: gestos con la mano frente a la cámara (MediaPipe, en el dispositivo). */
 const gestos = new ControlGestos({
   escena: $("iaEscena"), video: $("iaVideo"), lienzo: $("iaLienzo"), etiqueta: $("iaEtiqueta"), carga: $("iaCarga"), guia: $("guiaIA"),
@@ -122,7 +141,8 @@ const demoVisor = new DemoVisor({
     brazo: { base: $("joystickBrazo"), perilla: $("joyPerillaBrazo") },
   },
   nivel: $("nivel"), tarjeta: $("demoPaso"), stop: $("btnStop"),
-  marcas: [$("guiaIA"), $("iaEscena")],          // modo IA: brillan la guía de gestos y las flechas de la cámara
+  marcas: [$("guiaIA"), $("iaEscena"), $("tactil")],   // IA: guía y flechas de la cámara · Táctil: flechas de la superficie
+  tactil,                                              // Táctil: la DEMO dibuja su trazo
   obtenerCatalogo: () => catalogo,
 });
 
@@ -161,6 +181,7 @@ async function detenerTodo(origen = O.boton) {
   cancelarSecuenciaVoz("cancelada con DETENER");
   for (const j of Object.values(joysticks)) j.soltar();
   giroscopio.pausar("Pausado por DETENER. Toca «Activar» para seguir.");
+  tactil.cancelar();
   if (gestos.activo) { gestos.bloquear(); $("iaEstado").textContent = "DETENER: abre la mano ✋ para volver a empezar."; }
   if (!claveStore.puedeControlar()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
   if (demo.activa) {
@@ -591,6 +612,7 @@ function actualizarControles() {
     brazo: new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, "brazo"))),
   }, (c) => catalogo.esActivo(c));
   $("btnIA").disabled = !listo && !gestos.activo && !gestos.cargando;
+  tactil.configurar(listo, new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, "conduccion"))));
   for (const [mando, j] of Object.entries(joysticks)) {
     j.pausado = !!mantener.mando && mantener.mando !== mando;     // un joystick sostenido a la vez
     j.configurar(listo, new Set(DIRECCIONES.filter((d) => catalogo.direccion(d, mando))));
@@ -630,6 +652,7 @@ function setModo(nuevo) {
   if (modo === "voz" && nuevo !== "voz") { voz.detener(); cancelarSecuenciaVoz("cancelada al cambiar de modo"); }
   if (nuevo !== "giro") giroscopio.pausar();
   if (nuevo !== "ia") gestos.pausar();
+  tactil.cancelar();
   for (const j of Object.values(joysticks)) j.soltar();
   modo = nuevo;
   try { localStorage.setItem("vehiculoIot.modo", nuevo); } catch { /* */ }

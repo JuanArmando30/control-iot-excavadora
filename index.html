@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; media-src 'self' blob: mediastream:; font-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Control remoto de la excavadora IoT: mando de conducción, mando de brazo y pala, giroscopio, gestos con la mano (IA), luz, sonido, encendido, voz y DETENER.">
+  <meta name="description" content="Control remoto de la excavadora IoT: mando de conducción, mando de brazo y pala, giroscopio, gestos con la mano (IA), táctil (deslizar), luz, sonido, encendido, voz y DETENER.">
   <meta name="theme-color" content="#060d24">
   <title>Control · Excavadora IoT</title>
   <link rel="icon" href="assets/icons/favicon.ico" sizes="16x16 32x32 48x48">
@@ -71,6 +71,8 @@
           <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-tilt"/></svg><span>Giro</span></button>
         <button type="button" data-modo="ia" aria-pressed="false" aria-label="Modo IA: gestos con la mano" title="IA (gestos con la mano)">
           <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-hand"/></svg><span>IA</span></button>
+        <button type="button" data-modo="tactil" aria-pressed="false" aria-label="Modo Táctil: deslizar" title="Táctil (deslizar)">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-swipe"/></svg><span>Táctil</span></button>
       </div>
 
       <div id="aviso" class="aviso aviso-linea" role="status" hidden></div>
@@ -111,6 +113,25 @@
               <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Centrar</span></button>
           </div>
           <p id="giroEstado" class="giro-estado" aria-live="polite">Toca «Activar» y sostén el teléfono cómodo.</p>
+        </div>
+      </div>
+
+      <!-- Modo Táctil: superficie para deslizar (dedo o mouse); cada deslizamiento = un pulso -->
+      <div class="pad pad-izq pad-tactil" role="group" aria-labelledby="tPadTactil" data-vista="tactil" hidden>
+        <h3 id="tPadTactil" class="pad-titulo">Táctil · desliza para conducir</h3>
+        <div class="giro">
+          <div class="giro-zona">
+            <div id="tactil" class="tactil deshabilitado" tabindex="0" role="application" aria-describedby="tactilEstado"
+                 aria-label="Superficie táctil. Desliza el dedo o arrastra con el mouse: arriba avanza, abajo retrocede, a los lados gira. Cada deslizamiento envía una orden. Con el teclado usa las flechas.">
+              <canvas id="tactilLienzo" class="tactil-lienzo" aria-hidden="true"></canvas>
+              <span class="tactil-guia" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-swipe"/></svg><span>Desliza aquí</span></span>
+              <span class="tactil-flecha dir-arriba" data-dir="arriba" data-codigo="1" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-up"/></svg><small>Avanzar</small></span>
+              <span class="tactil-flecha dir-abajo" data-dir="abajo" data-codigo="2" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-down"/></svg><small>Atrás</small></span>
+              <span class="tactil-flecha dir-izquierda" data-dir="izquierda" data-codigo="3" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-left"/></svg><small>Izq.</small></span>
+              <span class="tactil-flecha dir-derecha" data-dir="derecha" data-codigo="4" aria-hidden="true"><svg class="ico"><use href="assets/icons/sprite.svg#i-right"/></svg><small>Der.</small></span>
+            </div>
+          </div>
+          <p id="tactilEstado" class="giro-estado" aria-live="polite">Desliza en línea recta: cada deslizamiento envía una orden.</p>
         </div>
       </div>
 
@@ -174,7 +195,7 @@
         </div>
       </div>
 
-      <div class="pad pad-der pad-giro-brazo" role="group" aria-labelledby="tPadGiroBrazo" data-vista="giro" hidden>
+      <div class="pad pad-der pad-giro-brazo" role="group" aria-labelledby="tPadGiroBrazo" data-vista="giro tactil" hidden>
         <h3 id="tPadGiroBrazo" class="pad-titulo">Brazo y pala</h3>
         <div class="pad-zona">
           <div id="botonesGiro" class="botones-brazo" data-mando="brazo"></div>

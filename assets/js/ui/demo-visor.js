@@ -10,6 +10,8 @@
  *               los pasos de brazo/pala brillan en la botonera 2×2.
  *  - Voz:       una tarjeta grande con icono, acción y número de paso.
  *  - IA:        brilla el gesto de la guía y, al conducir, la flecha sobre la cámara.
+ *  - Táctil:    se "dibuja" un deslizamiento hacia la dirección y brilla su flecha;
+ *               los pasos de brazo/pala brillan en la botonera 2×2.
  *  - Luz, sonido, On/Off: brilla su botón. DETENER: destella el botón DETENER.
  * El resto del mando sigue atenuado (bloqueado). Es solo visual: no envía nada.
  */
@@ -34,8 +36,8 @@ export class DemoVisor {
    *          marcas?: HTMLElement[] (contenedores con elementos [data-codigo] que también brillan),
    *          obtenerCatalogo: () => import("../domain/catalogo.js").Catalogo}} op
    */
-  constructor({ botonera, joysticks, nivel, tarjeta, stop, marcas = [], obtenerCatalogo }) {
-    Object.assign(this, { botonera, joysticks, nivel, tarjeta, stop, marcas, obtenerCatalogo });
+  constructor({ botonera, joysticks, nivel, tarjeta, stop, marcas = [], tactil = null, obtenerCatalogo }) {
+    Object.assign(this, { botonera, joysticks, nivel, tarjeta, stop, marcas, tactil, obtenerCatalogo });
     this.timer = null;
     this.activos = [];
   }
@@ -79,6 +81,7 @@ export class DemoVisor {
         this.nivel.style.setProperty("--gy", String(vy * INCLINACION));
         this._encender(this.nivel);
         this.nivel.querySelector(`[data-dir="${d.dir}"]`)?.classList.add("on");
+        this.tactil?.dibujarDemo(d.dir);
       }
     }
     if (esParo) this._encender(this.stop, "demo-paro");
@@ -94,6 +97,7 @@ export class DemoVisor {
   /** La DEMO terminó o se canceló: todo a reposo y sin tarjeta. */
   fin() {
     this._apagar();
+    this.tactil?.limpiar();
     if (this.tarjeta) this.tarjeta.hidden = true;
   }
 

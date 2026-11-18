@@ -64,11 +64,23 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 | G11 | «Centrar» con el teléfono en otra postura | La nueva postura pasa a ser la neutral |
 | G12 | En una PC sin sensor, toca «Activar» | «No llegan datos del sensor…»; no se envía nada |
 
+## T · Táctil (deslizar; teléfono con el dedo, PC con el mouse)
+
+| # | Pasos | Resultado esperado |
+|---|---|---|
+| T1 | Abre el modo Táctil | Superficie «Desliza aquí» con flechas Avanzar/Atrás/Izq./Der.; brazo y pala en botones (2×2, o fila de 4 en teléfono vertical) |
+| T2 | Desliza hacia arriba / abajo / izquierda / derecha y suelta | UN `POST` por deslizamiento: AVANZAR / RETROCEDER / GIRAR_IZQUIERDA / GIRAR_DERECHA (origen `WEB_TACTIL`); «… ✓» debajo |
+| T3 | Mientras arrastras (sin soltar) | Trazo luminoso que sigue al dedo y la flecha de la dirección se ilumina; aún no se envía nada |
+| T4 | Toque sin moverte / trazo muy corto / diagonal | No se envía nada; «Desliza un poco más largo» o «Desliza en línea recta» |
+| T5 | Repite T2 con el mouse en la computadora (clic sostenido y arrastrar) | Mismo resultado |
+| T6 | Sin conexión WSS o con DEMO en curso, intenta deslizar | No envía; explica el motivo |
+| T7 | Durante una DEMO | Superficie atenuada; en cada paso de conducción se dibuja solo un trazo violeta y brilla su flecha |
+
 ## IA · Gestos con la mano (modo IA; teléfono, tableta o PC con cámara, por HTTPS)
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
-| IA0 | Cambia entre los 5 modos | IA tiene paneles propios (cámara + guía de gestos); no aparecen en los otros modos |
+| IA0 | Cambia entre los 6 modos | IA tiene paneles propios (cámara + guía de gestos); no aparecen en los otros modos |
 | IA1 | Toca «Activar cámara» y acepta el permiso | La primera vez «Descargando la IA…» (~20 MB); luego se ve la cámara en espejo. Nada se envía |
 | IA2 | Muestra la mano abierta ✋ | El esqueleto de la mano aparece dibujado; estado «Listo: ✊ conduce…» |
 | IA3 | Cierra el puño ✊ al centro y súbelo ~1 mano | AVANZAR (origen `WEB_IA`); flecha superior y chip ↑ iluminados, borde cian; reenvío cada 2.4 s mientras sigas arriba |
@@ -106,7 +118,7 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 
 ## M · DEMO
 
-**Desde Control (botón «Demo» de la fila central, en los 5 modos):**
+**Desde Control (botón «Demo» de la fila central, en los 6 modos):**
 
 | # | Pasos | Resultado esperado |
 |---|---|---|
@@ -117,7 +129,7 @@ En Monitoreo (Eventos WSS) cada caso debe mostrar **un solo** DETENER, salvo D2b
 | MC5 | En el panel toca «Crear o editar» | Abre Administración directamente en la pestaña DEMO |
 | MC6 | Di (o escribe) «inicia la demo» en modo Voz | Inicia la última DEMO elegida (o la primera activa) |
 | MC7 | Sin clave o sin WSS | Botón deshabilitado |
-| MC9 | Inicia una DEMO y recorre los 5 modos mientras corre | El mando queda atenuado y **solo brilla lo que hace cada paso**, durante lo que dura: Pulso = el botón de la cruceta (o de brazo/pala, o el accesorio); Joystick = la perilla se desplaza hacia la dirección; Giro = el teléfono dibujado se inclina y se ilumina la etiqueta (brazo/pala: la botonera 2×2); Voz = tarjeta «Paso n de N · acción»; IA = fila del gesto y su dirección en la guía, y la flecha sobre la cámara al conducir. DETENER de la DEMO hace destellar el botón DETENER. La banda superior muestra «DEMO «…» · paso n/N · acción» con barra de avance. Al terminar todo vuelve a la normalidad |
+| MC9 | Inicia una DEMO y recorre los 6 modos mientras corre | El mando queda atenuado y **solo brilla lo que hace cada paso**, durante lo que dura: Pulso = el botón de la cruceta (o de brazo/pala, o el accesorio); Joystick = la perilla se desplaza hacia la dirección; Giro = el teléfono dibujado se inclina y se ilumina la etiqueta (brazo/pala: la botonera 2×2); Voz = tarjeta «Paso n de N · acción»; IA = fila del gesto y su dirección en la guía, y la flecha sobre la cámara al conducir; Táctil = se dibuja solo un trazo violeta hacia la dirección y brilla su flecha. DETENER de la DEMO hace destellar el botón DETENER. La banda superior muestra «DEMO «…» · paso n/N · acción» con barra de avance. Al terminar todo vuelve a la normalidad |
 | MC8 | Teléfono horizontal estrecho (p. ej. 640×360) | Si Luz · Sonido · On/Off · Demo no caben en una fila, Demo pasa abajo **centrada** |
 
 **Vista desde Monitoreo (las DEMO se inician en Control):**
