@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'; connect-src https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Administración y configuración del vehículo IoT: vehículos, catálogo de comandos y DEMO.">
+  <meta name="description" content="Administración de la empresa: inventario de unidades, modelos, clientes, asignaciones, bitácora y catálogo técnico del vehículo IoT.">
   <meta name="theme-color" content="#060d24">
   <title>Administración · Excavadora IoT</title>
   <link rel="icon" href="assets/icons/favicon.ico" sizes="16x16 32x32 48x48">
@@ -49,29 +49,66 @@
       </nav>
       <div id="panelConectividad" class="estado-barra"></div>
       </div>
-      <button id="btnClave" class="btn btn-sm btn-outline-warning btn-clave" type="button">
-        <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-key"/></svg><span>Sin clave</span>
-      </button>
+      <div class="acciones-sup">
+        <button id="btnSesion" class="btn btn-sm btn-outline-light btn-clave" type="button">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-user"/></svg><span>Entrar</span>
+        </button>
+        <button id="btnClave" class="btn btn-sm btn-outline-warning btn-clave" type="button">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-key"/></svg><span>Sin clave</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <main id="contenido" class="container-xl contenido contenido-admin">
-    <h1 class="visually-hidden">Administración y configuración</h1>
-    <section class="tarjeta admin" aria-labelledby="tGestion">
+  <main id="contenido" class="container-xl contenido contenido-admin" aria-busy="true">
+    <h1 class="visually-hidden">Administración</h1>
+
+    <!-- ======================= Sin sesión: iniciar sesión ======================= -->
+    <section id="vistaAcceso" class="vista-acceso" aria-label="Iniciar sesión" hidden></section>
+
+    <!-- ======================= Comprador (rol usuario) ======================= -->
+    <section id="vistaComprador" class="tarjeta vista-comprador" aria-labelledby="tComprador" hidden>
+      <div class="tarjeta-h">
+        <h2 id="tComprador">Mis vehículos</h2>
+      </div>
+      <p class="aviso">Administración es para la empresa. Aquí ves las unidades asignadas a tu cuenta; su control, monitoreo, configuración y editor de DEMO llegan en la siguiente etapa.</p>
+      <ul id="listaMisVehiculos" class="lista-mis" aria-live="polite"></ul>
+    </section>
+
+    <!-- ======================= Administrador ======================= -->
+    <section id="vistaAdmin" class="tarjeta admin" aria-labelledby="tGestion" hidden>
           <div class="tarjeta-h">
-            <h2 id="tGestion">Gestión de datos</h2>
-            <div class="d-flex gap-2 align-items-center">
+            <h2 id="tGestion">Administración</h2>
+            <div id="barraVehiculo" class="d-flex gap-2 align-items-center">
               <label class="small text-nowrap" for="selVehiculo">Vehículo</label>
               <select id="selVehiculo" class="form-select form-select-sm"></select>
-              <button id="btnRecargar" class="btn btn-sm btn-outline-light" type="button" aria-label="Recargar datos">
-                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-sync"/></svg>
-              </button>
             </div>
+            <button id="btnRecargar" class="btn btn-sm btn-outline-light" type="button" aria-label="Recargar la pestaña">
+              <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-sync"/></svg>
+            </button>
           </div>
 
-          <ul class="nav nav-tabs" role="tablist">
+          <ul class="nav nav-tabs" role="tablist" aria-label="Secciones de administración">
+            <li class="nav-item solo-admin" role="presentation">
+              <button class="nav-link active" id="tab-panel" data-bs-toggle="tab" data-bs-target="#pnl-panel" type="button" role="tab" aria-controls="pnl-panel" aria-selected="true">Panel</button>
+            </li>
+            <li class="nav-item solo-admin" role="presentation">
+              <button class="nav-link" id="tab-inv" data-bs-toggle="tab" data-bs-target="#pnl-inv" type="button" role="tab" aria-controls="pnl-inv" aria-selected="false">Inventario</button>
+            </li>
+            <li class="nav-item solo-admin" role="presentation">
+              <button class="nav-link" id="tab-mod" data-bs-toggle="tab" data-bs-target="#pnl-mod" type="button" role="tab" aria-controls="pnl-mod" aria-selected="false">Modelos</button>
+            </li>
+            <li class="nav-item solo-admin" role="presentation">
+              <button class="nav-link" id="tab-cli" data-bs-toggle="tab" data-bs-target="#pnl-cli" type="button" role="tab" aria-controls="pnl-cli" aria-selected="false">Clientes</button>
+            </li>
+            <li class="nav-item solo-admin" role="presentation">
+              <button class="nav-link" id="tab-asg" data-bs-toggle="tab" data-bs-target="#pnl-asg" type="button" role="tab" aria-controls="pnl-asg" aria-selected="false">Asignaciones</button>
+            </li>
+            <li class="nav-item solo-admin" role="presentation">
+              <button class="nav-link" id="tab-bit" data-bs-toggle="tab" data-bs-target="#pnl-bit" type="button" role="tab" aria-controls="pnl-bit" aria-selected="false">Bitácora</button>
+            </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="tab-veh" data-bs-toggle="tab" data-bs-target="#pnl-veh" type="button" role="tab" aria-controls="pnl-veh" aria-selected="true">Vehículos</button>
+              <button class="nav-link" id="tab-veh" data-bs-toggle="tab" data-bs-target="#pnl-veh" type="button" role="tab" aria-controls="pnl-veh" aria-selected="false">Vehículos</button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="tab-cmd" data-bs-toggle="tab" data-bs-target="#pnl-cmd" type="button" role="tab" aria-controls="pnl-cmd" aria-selected="false">Comandos</button>
@@ -85,9 +122,184 @@
           </ul>
 
           <div class="tab-content pt-3">
-            <div class="tab-pane fade show active" id="pnl-veh" role="tabpanel" aria-labelledby="tab-veh" tabindex="0">
+            <!-- ---------------- Panel ---------------- -->
+            <div class="tab-pane fade show active solo-admin" id="pnl-panel" role="tabpanel" aria-labelledby="tab-panel" tabindex="0">
+              <div class="panel-pane">
+                <p id="metricasFecha" class="ayuda mt-0"></p>
+                <div id="gridMetricas" class="metricas" aria-live="polite"></div>
+                <h3 class="subtitulo">Últimas acciones</h3>
+                <ul id="listaUltimas" class="registro"></ul>
+              </div>
+            </div>
+
+            <!-- ---------------- Inventario ---------------- -->
+            <div class="tab-pane fade solo-admin" id="pnl-inv" role="tabpanel" aria-labelledby="tab-inv" tabindex="0">
+              <div class="admin-barra">
+                <label class="visually-hidden" for="invBuscar">Buscar unidad</label>
+                <input id="invBuscar" class="form-control form-control-sm" type="search" placeholder="Buscar nombre o serie" maxlength="80" autocomplete="off">
+                <label class="visually-hidden" for="invEstado">Estado</label>
+                <select id="invEstado" class="form-select form-select-sm">
+                  <option value="">Todos los estados</option>
+                  <option value="inventario">Inventario</option>
+                  <option value="exhibicion">Exhibición</option>
+                  <option value="vendida">Vendida</option>
+                  <option value="baja">Baja</option>
+                </select>
+                <label class="visually-hidden" for="invModelo">Modelo</label>
+                <select id="invModelo" class="form-select form-select-sm"><option value="">Todos los modelos</option></select>
+                <button id="btnNuevaUnidad" class="btn btn-sm btn-primary" type="button">
+                  <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Nueva
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                  <caption class="visually-hidden">Inventario de unidades</caption>
+                  <thead><tr>
+                    <th scope="col">#</th><th scope="col">Unidad</th><th scope="col" class="d-none d-md-table-cell">Modelo</th>
+                    <th scope="col">Estado</th><th scope="col" class="d-none d-sm-table-cell">Propietario</th><th scope="col" class="text-end">Acciones</th>
+                  </tr></thead>
+                  <tbody id="tbUnidades"></tbody>
+                </table>
+              </div>
+              <div id="pagUnidades" class="paginador"></div>
+            </div>
+
+            <!-- ---------------- Modelos ---------------- -->
+            <div class="tab-pane fade solo-admin" id="pnl-mod" role="tabpanel" aria-labelledby="tab-mod" tabindex="0">
+              <div class="demo-bloques">
+                <div class="demo-bloque">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <p class="ayuda m-0">Cada modelo define los comandos permitidos y los límites de seguridad.</p>
+                    <button id="btnNuevoModelo" class="btn btn-sm btn-primary" type="button">
+                      <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Nuevo
+                    </button>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                      <caption class="visually-hidden">Modelos</caption>
+                      <thead><tr>
+                        <th scope="col">Modelo y límites</th>
+                        <th scope="col" class="text-center text-nowrap" title="Unidades / capacidades">Unid./cap.</th><th scope="col">Estado</th><th scope="col" class="text-end">Acciones</th>
+                      </tr></thead>
+                      <tbody id="tbModelos"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="demo-bloque">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 id="tituloCapacidades" class="subtitulo m-0">Capacidades del modelo</h3>
+                    <button id="btnNuevaCapacidad" class="btn btn-sm btn-primary" type="button" disabled>
+                      <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Capacidad
+                    </button>
+                  </div>
+                  <p class="ayuda mt-0">Las unidades nuevas copian estas capacidades; las ya registradas conservan su catálogo (pestaña Comandos).</p>
+                  <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                      <caption class="visually-hidden">Capacidades del modelo seleccionado</caption>
+                      <thead><tr>
+                        <th scope="col">Código</th><th scope="col">Nombre</th><th scope="col" class="d-none d-sm-table-cell">Tipo</th>
+                        <th scope="col">Invitado</th><th scope="col" class="text-end">Acciones</th>
+                      </tr></thead>
+                      <tbody id="tbCapacidades"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ---------------- Clientes ---------------- -->
+            <div class="tab-pane fade solo-admin" id="pnl-cli" role="tabpanel" aria-labelledby="tab-cli" tabindex="0">
+              <div class="admin-barra">
+                <label class="visually-hidden" for="cliBuscar">Buscar usuario</label>
+                <input id="cliBuscar" class="form-control form-control-sm" type="search" placeholder="Buscar nombre o correo" maxlength="100" autocomplete="off">
+                <label class="visually-hidden" for="cliRol">Rol</label>
+                <select id="cliRol" class="form-select form-select-sm">
+                  <option value="usuario">Clientes</option>
+                  <option value="admin">Administradores</option>
+                  <option value="">Todos</option>
+                </select>
+                <label class="visually-hidden" for="cliActivo">Estado</label>
+                <select id="cliActivo" class="form-select form-select-sm">
+                  <option value="">Activos e inactivos</option>
+                  <option value="true">Solo activos</option>
+                  <option value="false">Solo inactivos</option>
+                </select>
+                <button id="btnNuevoCliente" class="btn btn-sm btn-primary" type="button">
+                  <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Nuevo
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                  <caption class="visually-hidden">Clientes y administradores</caption>
+                  <thead><tr>
+                    <th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col" class="d-none d-sm-table-cell text-center">Unidades</th>
+                    <th scope="col" class="d-none d-md-table-cell">Acceso</th><th scope="col">Estado</th><th scope="col" class="text-end">Acciones</th>
+                  </tr></thead>
+                  <tbody id="tbUsuarios"></tbody>
+                </table>
+              </div>
+              <div id="pagUsuarios" class="paginador"></div>
+            </div>
+
+            <!-- ---------------- Asignaciones ---------------- -->
+            <div class="tab-pane fade solo-admin" id="pnl-asg" role="tabpanel" aria-labelledby="tab-asg" tabindex="0">
+              <div class="admin-barra">
+                <div class="form-check form-switch m-0">
+                  <input id="asgVigentes" class="form-check-input" type="checkbox" role="switch" checked>
+                  <label class="form-check-label small" for="asgVigentes">Solo vigentes</label>
+                </div>
+                <button id="btnNuevaAsignacion" class="btn btn-sm btn-primary ms-auto" type="button">
+                  <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-link"/></svg> Asignar
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                  <caption class="visually-hidden">Asignaciones de unidades a clientes</caption>
+                  <thead><tr>
+                    <th scope="col">Unidad</th><th scope="col">Cliente</th><th scope="col" class="d-none d-md-table-cell">Periodo</th>
+                    <th scope="col">Estado</th><th scope="col" class="text-end">Acciones</th>
+                  </tr></thead>
+                  <tbody id="tbAsignaciones"></tbody>
+                </table>
+              </div>
+              <div id="pagAsignaciones" class="paginador"></div>
+            </div>
+
+            <!-- ---------------- Bitácora ---------------- -->
+            <div class="tab-pane fade solo-admin" id="pnl-bit" role="tabpanel" aria-labelledby="tab-bit" tabindex="0">
+              <div class="admin-barra">
+                <label class="small text-nowrap" for="bitAccion">Acción</label>
+                <select id="bitAccion" class="form-select form-select-sm">
+                  <option value="">Todas</option>
+                  <option value="login.">Inicios de sesión</option>
+                  <option value="usuario.">Usuarios</option>
+                  <option value="rol.">Cambios de rol</option>
+                  <option value="contrasena.">Contraseñas</option>
+                  <option value="unidad.">Unidades</option>
+                  <option value="asignacion.">Asignaciones</option>
+                  <option value="modelo.">Modelos</option>
+                  <option value="capacidad.">Capacidades</option>
+                  <option value="soporte.">Soporte</option>
+                  <option value="sesion.">Sesiones sospechosas</option>
+                </select>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                  <caption class="visually-hidden">Bitácora de auditoría</caption>
+                  <thead><tr>
+                    <th scope="col">Fecha</th><th scope="col">Quién</th><th scope="col">Acción</th>
+                    <th scope="col" class="d-none d-md-table-cell">Recurso</th><th scope="col">Resultado</th><th scope="col" class="d-none d-lg-table-cell">Detalle</th>
+                  </tr></thead>
+                  <tbody id="tbAuditoria"></tbody>
+                </table>
+              </div>
+              <div id="pagAuditoria" class="paginador"></div>
+            </div>
+
+            <!-- ---------------- Vehículos (catálogo técnico) ---------------- -->
+            <div class="tab-pane fade" id="pnl-veh" role="tabpanel" aria-labelledby="tab-veh" tabindex="0">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <p class="ayuda m-0">Actualizar reemplaza todos los campos. Eliminar borra en cascada.</p>
+                <p class="ayuda m-0">Registro técnico. Para vender o dar de baja usa Inventario. Eliminar se rechaza si hay historial.</p>
                 <button id="btnNuevoVehiculo" class="btn btn-sm btn-primary" type="button">
                   <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Nuevo
                 </button>

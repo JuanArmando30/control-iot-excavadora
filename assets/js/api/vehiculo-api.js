@@ -5,6 +5,7 @@
 import { CONFIG } from "../config.js";
 import { HttpClient } from "../core/http-client.js";
 import { claveStore } from "../core/clave-store.js";
+import { sesionStore } from "../core/sesion-store.js";
 import * as V from "../core/validadores.js";
 
 const R = CONFIG.rutas;
@@ -14,6 +15,7 @@ export const http = new HttpClient({
   timeoutMs: CONFIG.tiempos.timeoutMs,
   obtenerClave: claveStore.obtener,
   controlSinClave: claveStore.esAbierto,
+  sesion: sesionStore,
 });
 
 const datos = (p) => p.then((r) => r.data);

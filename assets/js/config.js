@@ -40,6 +40,29 @@ const RUTAS = Object.freeze({
   demoMovimientos: (v, d) => `/vehiculos/${v}/demos/${d}/movimientos`,
   demoMovActualizar: (v, d, m) => `/vehiculos/${v}/demos/${d}/movimientos/${m}/actualizar`,
   demoMovEliminar: (v, d, m) => `/vehiculos/${v}/demos/${d}/movimientos/${m}/eliminar`,
+  // Sesión (Etapa 4 · app/api/routes/auth.py)
+  authLogin: () => "/auth/login",
+  authRenovar: () => "/auth/renovar",
+  authSalir: () => "/auth/salir",
+  authYo: () => "/auth/yo",
+  authRestablecer: () => "/auth/restablecer",
+  authCambiar: () => "/auth/cambiar-contrasena",
+  misVehiculos: () => "/mis-vehiculos",
+  // Administración (Etapa 3 · app/api/routes/admin.py)
+  adminMetricas: () => "/admin/metricas",
+  adminModelos: () => "/admin/modelos",
+  adminModeloActualizar: (m) => `/admin/modelos/${m}/actualizar`,
+  adminCapacidades: (m) => `/admin/modelos/${m}/capacidades`,
+  adminCapacidadEliminar: (m, c) => `/admin/modelos/${m}/capacidades/${c}/eliminar`,
+  adminUnidades: () => "/admin/unidades",
+  adminUnidadActualizar: (v) => `/admin/unidades/${v}/actualizar`,
+  adminUnidadBaja: (v) => `/admin/unidades/${v}/baja`,
+  adminUsuarios: () => "/admin/usuarios",
+  adminUsuarioActualizar: (u) => `/admin/usuarios/${u}/actualizar`,
+  adminUsuarioCodigo: (u) => `/admin/usuarios/${u}/codigo-restablecimiento`,
+  adminAsignaciones: () => "/admin/asignaciones",
+  adminAsignacionFinalizar: (a) => `/admin/asignaciones/${a}/finalizar`,
+  adminAuditoria: () => "/admin/auditoria",
 });
 
 export const CONFIG = Object.freeze({
@@ -71,7 +94,12 @@ export const CONFIG = Object.freeze({
      */
     mantenerMs: 2400,
     historialRetrasoMs: 600,
+    /** Se renueva el token de acceso este tiempo ANTES de que caduque (dura 10 min). */
+    renovarAntesMs: 60000,
   }),
+
+  /** Tamaño de página de las tablas de Administración (el backend admite 1–200). */
+  paginaAdmin: 25,
 
   /** Valores de "origen" (backend: ^[A-Za-z0-9_-]{1,30}$). Se guardan en el historial. */
   origen: Object.freeze({

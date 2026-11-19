@@ -88,7 +88,7 @@ Además hay **una sola conexión WSS por navegador**, compartida entre pestañas
 | H7 | Media | Panel heredado `/control` público | Etapa 9 |
 | H8 | Media | `sp_obtener_historial` no tiene `LIMIT` ni índice compuesto: ordena todo el historial (1356 filas y creciendo) | Índice en V006 + SP con `LIMIT` en la Etapa 3 |
 | H9 | **Media (riesgo físico)** | Un paso de DEMO admite hasta 600 000 ms y **el firmware lo ejecuta completo sin tope** | Límites por modelo (V001) validados en el servidor (Etapa 6); tope opcional en el firmware |
-| H14 | Media | `sql_mode` no estricto: un texto demasiado largo se trunca en silencio | Las migraciones corren en modo estricto; la API lo fijará por sesión (Etapa 3) |
+| H14 | Media | `sql_mode` no estricto: un texto demasiado largo se trunca en silencio | Un SP usa el modo con el que **se creó**, no el de la sesión: las migraciones y los 25 SP nuevos (V009) se crean en modo estricto; los 21 originales conservan el suyo (la API ya valida longitudes con Pydantic) |
 | H15 | Media | La **contraseña del portal Wi-Fi del ESP32** está escrita en el código y su repositorio es público | Cambiarla y moverla a un archivo fuera de git. Sigue en el historial de git: rotarla es lo que la invalida |
 | H16 | Baja | El firmware usa `beginSSL` sin certificado raíz ni huella: según la versión de la librería, podría no verificar la identidad del servidor | Usar `beginSslWithCA` con la raíz de Let's Encrypt (ISRG Root X1) |
 | H17 | Baja | El vehículo registra «ESP8266», pero la placa es ESP32 | Corregirlo desde Administración; las migraciones no inventan datos |

@@ -1,16 +1,33 @@
 /**
- * Página de ADMINISTRACIÓN / CONFIGURACIÓN.
- * Usa exclusivamente los endpoints existentes (que ejecutan los 21
- * procedimientos almacenados). Crear/actualizar requieren clave de operador;
- * eliminar requiere clave de administrador (la API responde 403 si no).
+ * Página de ADMINISTRACIÓN (Etapa 5).
+ *
+ * Vistas según quién entra:
+ * - Sin sesión ni clave → tarjeta de inicio de sesión.
+ * - Comprador (rol usuario) → sus unidades (el resto llega en la Etapa 6).
+ * - Administrador (token admin, o clave X-API-Key de admin en transición) →
+ *   Panel, Inventario, Modelos, Clientes, Asignaciones, Bitácora y el
+ *   catálogo técnico (Vehículos, Comandos, DEMO) y Configuración.
+ * - Clave de operador (transición) → solo el catálogo técnico.
+ *
+ * Las pestañas se cargan al abrirlas (siempre con datos frescos de RDS).
  */
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
+import { auth } from "../api/auth-api.js";
 import { claveStore } from "../core/clave-store.js";
+import { sesionStore } from "../core/sesion-store.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { abrirModal, campo, confirmar, leerFormulario } from "../ui/modales.js";
+import { montarAcceso, montarBotonSesion } from "../ui/sesion-ui.js";
 import { $, el, icono, toast } from "../ui/dom.js";
+import { fecha, insigniaEstado } from "../ui/admin-ui.js";
 import { iniciarConectividad } from "./comun.js";
+import { crearPanel } from "./admin/panel.js";
+import { crearInventario } from "./admin/inventario.js";
+import { crearModelos } from "./admin/modelos.js";
+import { crearClientes } from "./admin/clientes.js";
+import { crearAsignaciones } from "./admin/asignaciones.js";
+import { crearBitacora } from "./admin/bitacora.js";
 
 let vehiculos = [];
 let vehiculoSel = CONFIG.vehiculoId;
@@ -19,9 +36,10 @@ let demos = [];
 let demoSel = null;
 
 /* ----------------------------- Utilidades ---------------------------- */
+/** ¿Puede escribir en el catálogo técnico? Admin con sesión, o clave (transición). */
 function requiereClave() {
-  if (claveStore.obtener()) return true;
-  abrirDialogoClave({ motivo: "Esta operación requiere la clave de operador (o de administrador para eliminar)." });
+  if (claveStore.obtener() || sesionStore.esAdmin()) return true;
+  abrirDialogoClave({ motivo: "Esta operación requiere iniciar sesión como administrador o la clave de operador." });
   return false;
 }
 
@@ -48,7 +66,7 @@ async function escribir(accion, mensajeOk, refrescar) {
     await refrescar();
   } catch (e) {
     toast(e.message, "error");
-    if (e.status === 401) abrirDialogoClave({ motivo: e.message });
+    if (e.status === 401 && !sesionStore.activa()) abrirDialogoClave({ motivo: e.message });
   }
 }
 
@@ -66,7 +84,7 @@ function formulario(titulo, campos, guardar) {
           try {
             await guardar(leerFormulario(form));
           } catch (e) {
-            if (e.status === 401) { claveStore.olvidar(); }
+            if (e.status === 401 && claveStore.obtener()) { claveStore.olvidar(); }
             throw e;
           }
         },
@@ -110,7 +128,7 @@ async function cargarVehiculos() {
       `Editar vehículo ${v.nombre}`),
       boton("Eliminar", "i-trash", "btn-outline-danger", async () => {
         if (!requiereClave()) return;
-        if (!(await confirmar("Eliminar vehículo", `Se eliminará «${v.nombre}» con sus comandos, estado, historial y DEMO (cascada). Requiere clave de administrador.`))) return;
+        if (!(await confirmar("Eliminar vehículo", `Se eliminará «${v.nombre}» con sus comandos y DEMO. Si tiene historial, la API lo rechaza para conservarlo: usa «Baja» en Inventario. Requiere administrador.`))) return;
         await escribir(() => api.eliminarVehiculo(v.id_vehiculo), "Vehículo eliminado.", recargarTodo);
       }, `Eliminar vehículo ${v.nombre}`),
     ]),
@@ -247,6 +265,11 @@ function pintarConfiguracion() {
 
 function pintarClave() {
   const rol = claveStore.rol();
+  const u = sesionStore.usuario();
+  if (u && !claveStore.obtener()) {
+    $("estadoClave").textContent = `Sesión de ${u.nombre} (${u.rol === "admin" ? "administrador" : "comprador"}). No hace falta la clave X-API-Key.`;
+    return;
+  }
   $("estadoClave").textContent = claveStore.obtener()
     ? `Clave guardada en este navegador · rol: ${rol === "admin" ? "administrador (crear, actualizar y eliminar)" : rol === "operador" ? "operador (crear y actualizar; eliminar devolverá 403)" : "sin validar"}`
     : claveStore.esAbierto()
@@ -259,7 +282,7 @@ async function recargarTodo() {
   await Promise.all([cargarComandos(), cargarDemos()]);
 }
 
-/* ------------------------------ Eventos ----------------------------- */
+/* ------------------------- Eventos del catálogo ------------------------- */
 $("selVehiculo").addEventListener("change", async (e) => {
   vehiculoSel = Number.parseInt(e.target.value, 10);
   demoSel = null;
@@ -276,20 +299,109 @@ $("btnNuevoMovimiento").addEventListener("click", async () => {
   formulario("Agregar paso a la DEMO", camposMovimiento(),
     async (d) => { await api.agregarMovimientoDemo(vehiculoSel, demoSel, d); toast("Paso agregado.", "ok"); await cargarMovimientos(); });
 });
-$("btnRecargar").addEventListener("click", recargarTodo);
-claveStore.alCambiar(pintarClave);
+
+/* ------------------------ Secciones de la empresa ----------------------- */
+// Si el inventario crea o cambia unidades, el selector del catálogo técnico se recarga al volver.
+let vehiculosObsoletos = true;
+const ctx = { alCambiar: () => { vehiculosObsoletos = true; } };
+
+async function asegurarVehiculos() {
+  if (!vehiculosObsoletos) return;
+  await cargarVehiculos();
+  vehiculosObsoletos = false;
+}
+
+const secciones = {
+  "pnl-panel": crearPanel(),
+  "pnl-inv": crearInventario(ctx),
+  "pnl-mod": crearModelos(ctx),
+  "pnl-cli": crearClientes(ctx),
+  "pnl-asg": crearAsignaciones(ctx),
+  "pnl-bit": crearBitacora(),
+  "pnl-veh": { cargar: async () => { vehiculosObsoletos = true; await asegurarVehiculos(); } },
+  "pnl-cmd": { cargar: async () => { await asegurarVehiculos(); await cargarComandos(); } },
+  "pnl-demo": { cargar: async () => { await asegurarVehiculos(); await Promise.all([cargarComandos(), cargarDemos()]); } },
+  "pnl-conf": { cargar: async () => { pintarConfiguracion(); pintarClave(); } },
+};
+
+const panelActivo = () => document.querySelector("#vistaAdmin .tab-pane.active")?.id;
+
+async function cargarActiva() {
+  const id = panelActivo();
+  // El selector de vehículo solo aplica a Comandos y DEMO.
+  $("barraVehiculo").classList.toggle("d-none", !["pnl-cmd", "pnl-demo"].includes(id));
+  await secciones[id]?.cargar();
+}
+
+document.querySelectorAll('#vistaAdmin [data-bs-toggle="tab"]').forEach((b) => b.addEventListener("shown.bs.tab", cargarActiva));
+$("btnRecargar").addEventListener("click", cargarActiva);
+
+/* -------------------------------- Vistas -------------------------------- */
+let vistaActual = "";
+
+async function pintarMisVehiculos() {
+  const lista = $("listaMisVehiculos");
+  lista.replaceChildren(el("li", { class: "vacio", text: "Cargando…" }));
+  try {
+    const mias = await auth.misVehiculos();
+    if (!mias.length) {
+      lista.replaceChildren(el("li", { class: "vacio", text: "Todavía no tienes unidades asignadas. La empresa te las asigna al comprarlas." }));
+      return;
+    }
+    lista.replaceChildren(...mias.map((v) => el("li", { class: "mi-vehiculo" }, [
+      el("div", {}, [
+        el("strong", { text: v.nombre }),
+        el("small", { class: "celda-sec", text: `${v.modelo || "Modelo sin nombre"}${v.numero_serie ? ` · Serie ${v.numero_serie}` : ""}` }),
+      ]),
+      el("div", { class: "text-end" }, [
+        insigniaEstado(v.estado_comercial),
+        el("small", { class: "celda-sec", text: `Tuya desde ${fecha(v.asignada_desde)}` }),
+      ]),
+    ])));
+  } catch (e) {
+    lista.replaceChildren(el("li", { class: "aviso aviso-error", text: e.message }));
+  }
+}
+
+/** Decide qué vista mostrar según la sesión y la clave guardada. */
+async function aplicarVista() {
+  const u = sesionStore.usuario();
+  const rolClave = claveStore.obtener() ? claveStore.rol() : "";
+  let vista = "acceso";
+  if (u && u.rol === "usuario" && !rolClave) vista = "comprador";
+  else if ((u && u.rol === "admin") || rolClave === "admin") vista = "admin";
+  else if (rolClave === "operador") vista = "operador";
+
+  $("btnClave").classList.toggle("d-none", !!u);          // con sesión la clave no hace falta
+  pintarClave();
+  if (vista === vistaActual) return;
+  vistaActual = vista;
+
+  $("vistaAcceso").hidden = vista !== "acceso";
+  $("vistaComprador").hidden = vista !== "comprador";
+  $("vistaAdmin").hidden = !["admin", "operador"].includes(vista);
+  document.querySelectorAll("#vistaAdmin .solo-admin").forEach((n) => n.classList.toggle("d-none", vista === "operador"));
+  $("contenido").removeAttribute("aria-busy");
+
+  if (vista === "acceso") { setTimeout(() => $("accesoCorreo")?.focus(), 50); return; }
+  if (vista === "comprador") { await pintarMisVehiculos(); return; }
+
+  // Operador: no ve las pestañas de la empresa → empieza en Vehículos.
+  const inicial = location.hash === "#demo" ? "tab-demo" : vista === "operador" ? "tab-veh" : "tab-panel";
+  const boton = $(inicial);
+  if (boton.classList.contains("active")) await cargarActiva();
+  else window.bootstrap.Tab.getOrCreateInstance(boton).show();     // dispara shown.bs.tab → carga
+}
 
 /* Indicadores WSS · AWS · RDS en el menú (igual que Control), con la conexión WSS compartida. */
 const { ws } = iniciarConectividad({ barra: true });
 
 (async function iniciar() {
   ws.conectar();
-  pintarConfiguracion();
-  pintarClave();
-  await inicializarClave();
-  pintarClave();
-  await recargarTodo();
+  montarAcceso($("vistaAcceso"));
+  montarBotonSesion($("btnSesion"));
+  sesionStore.alCambiar(() => { aplicarVista(); });
+  claveStore.alCambiar(() => { aplicarVista(); });
+  await Promise.all([auth.recuperar(), inicializarClave()]);
+  await aplicarVista();
 })();
-
-/* Enlace directo a la pestaña DEMO (p. ej. desde el panel «Demo» de Control). */
-if (location.hash === "#demo") document.getElementById("tab-demo")?.click();

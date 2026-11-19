@@ -172,6 +172,57 @@ export function sesion(o) {
   return { rol: o.rol, acceso: o.acceso === "abierto" ? "abierto" : "clave" };
 }
 
+/* ------------------------ Sesión (Etapa 4) ------------------------- */
+
+const ROLES_USUARIO = new Set(["admin", "usuario"]);
+// Token opaco o JWT: solo caracteres de base64url y el punto.
+const FORMATO_TOKEN = /^[A-Za-z0-9._-]{16,4096}$/;
+
+export function usuarioSesion(o) {
+  exigirObjeto(o, "usuario");
+  if (!esEntero(o.id_usuario) || !ROLES_USUARIO.has(o.rol) || !esTexto(o.correo)) throw fallo("usuario");
+  return {
+    id_usuario: o.id_usuario,
+    correo: o.correo.slice(0, 254),
+    nombre: textoONulo(o.nombre, 100) || o.correo.slice(0, 254),
+    rol: o.rol,
+    debe_cambiar_contrasena: o.debe_cambiar_contrasena === true,
+  };
+}
+
+/** Respuesta de /auth/login, /auth/renovar y /auth/cambiar-contrasena. */
+export function sesionAuth(o) {
+  exigirObjeto(o, "sesión");
+  if (!esTexto(o.token_acceso) || !FORMATO_TOKEN.test(o.token_acceso)
+      || !esTexto(o.token_renovacion) || !FORMATO_TOKEN.test(o.token_renovacion)
+      || !esEntero(o.expira_en) || o.expira_en <= 0) throw fallo("sesión");
+  return {
+    token_acceso: o.token_acceso,
+    token_renovacion: o.token_renovacion,
+    expira_en: o.expira_en,
+    usuario: usuarioSesion(o.usuario),
+  };
+}
+
+/* ------------------------ Administración ---------------------------- */
+
+/** Fila de una tabla de Administración: objeto plano (la vista usa textContent). */
+export const fila = (o) => exigirObjeto(o, "registro");
+export const filas = (l) => exigirLista(l, "lista").map(fila);
+
+/** Listado paginado {total, limite, desplazamiento, elementos}. */
+export function pagina(o) {
+  exigirObjeto(o, "página");
+  if (!esEntero(o.total) || !esEntero(o.limite) || !esEntero(o.desplazamiento)) throw fallo("página");
+  return { total: o.total, limite: o.limite, desplazamiento: o.desplazamiento, elementos: filas(o.elementos) };
+}
+
+export function codigoRestablecimiento(o) {
+  exigirObjeto(o, "código");
+  if (!esTexto(o.codigo) || !/^[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(o.codigo)) throw fallo("código");
+  return { codigo: o.codigo, correo: textoONulo(o.correo, 254), expira_en: o.expira_en, minutos: enteroONulo(o.minutos) };
+}
+
 /* ---------------------------- WebSocket ---------------------------- */
 
 const EVENTOS_WS = new Set([

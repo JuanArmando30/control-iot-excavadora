@@ -1,6 +1,11 @@
 # Etapa 2 · Modelo de datos, migraciones y respaldo
 
-**Estado:** migraciones escritas y validadas sin base de datos (análisis de archivos y sintaxis). **Pendiente:** respaldo de RDS → prueba en la copia (`probar`) → aplicación en la base real.
+**Estado:**
+- **V001–V008** pasaron la prueba completa en la copia el 19 nov 2026. El informe está en `diagnostico/` del backend: sin diferencias de estructura y con los 21 SP funcionando.
+- **Ajuste después de esa prueba**, antes de aplicar en producción: `asignaciones.asignado_por` y `codigos_restablecimiento.creado_por` admiten NULL. Esto cubre las asignaciones hechas con la clave de administrador durante la transición y el primer código generado desde la consola.
+- **V009** (procedimientos de la Etapa 3) se suma al lote: ver [03-backend-administracion.md](03-backend-administracion.md).
+
+**Pendiente:** volver a ejecutar `probar` con V001–V009 → snapshot de RDS → aplicar las 9 juntas.
 **Base:** la estructura real exportada en la Etapa 1 ([01-diagnostico.md](01-diagnostico.md)).
 **Código:** backend `db/migraciones/` (8 migraciones, cada una con su reversión) y `app/db/migrar.py`.
 
@@ -154,6 +159,7 @@ erDiagram
 | V006 | Autor del historial + índice | Existen `usuarios` y `sesiones_invitado` | Ninguna fila previa tiene autor | Quita columnas e índices; recrea el índice simple de la llave si MySQL lo descartó |
 | V007 | Auditoría | Existe `usuarios` | La tabla existe | La borra |
 | V008 | Credenciales de dispositivo | Existe `vehiculos` | La tabla existe | La borra |
+| V009 | 25 procedimientos de Administración (Etapa 3), creados en modo estricto | Existen las tablas de V001–V008 | Los 25 existen + pruebas propias en la copia (`app/db/pruebas_procedimientos.py`) | Borra solo los 25 |
 
 Directivas en los archivos `.sql`, que interpreta `app/db/migrar.py`:
 

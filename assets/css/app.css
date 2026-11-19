@@ -1148,3 +1148,83 @@ body {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .carga { display: none; }                         /* sin animaciones no tiene sentido esperar */
 }
+
+/* ==========================================================================
+   ADMINISTRACIÓN · Etapa 5: sesión, vistas por rol y secciones de la empresa
+   ========================================================================== */
+/* Dos botones (sesión y clave) comparten el hueco del botón de clave */
+.acciones-sup { grid-area: clave; display: flex; gap: 6px; align-items: center; justify-self: end; }
+.acciones-sup .btn-clave { grid-area: auto; }
+@media (max-width: 380px) { .acciones-sup .btn-clave span { display: none; } }
+
+/* Inicio de sesión */
+.vista-acceso { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; place-items: center; padding: 8px 0; }
+.acceso-tarjeta {
+  width: min(420px, 100%); padding: 22px 20px; border-radius: var(--radio);
+  background: linear-gradient(180deg, #0f1e4ccc, #0b1639cc); border: 1px solid var(--panel-borde); box-shadow: 0 10px 30px #0006;
+}
+.acceso-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; color: var(--acento); }
+.acceso-cab .ico { width: 26px; height: 26px; }
+.acceso-cab h2 { font-size: 1.15rem; margin: 0; color: var(--texto); }
+.acceso-tarjeta .ayuda { margin: 4px 0 16px; }
+.acceso-enlaces { display: flex; flex-direction: column; align-items: center; margin-top: 12px; }
+.acceso-enlaces .btn-link { color: var(--acento); }
+
+/* Comprador */
+.vista-comprador { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.lista-mis { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.mi-vehiculo {
+  display: flex; justify-content: space-between; gap: 12px; align-items: center;
+  padding: 12px 14px; border-radius: 12px; background: #0a1434; border: 1px solid #1a2a60;
+}
+
+/* Barra de filtros sobre las tablas */
+.admin-barra { flex: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.admin-barra .form-control, .admin-barra .form-select { width: auto; flex: 1 1 140px; min-width: 0; max-width: 240px; }
+.admin-barra .btn-primary { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+
+/* Paginador */
+.paginador { flex: none; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-top: 6px; }
+.paginador:empty { display: none; }
+.paginador-txt { font-size: .8rem; color: var(--tenue); margin-right: 4px; }
+.paginador .btn { min-width: 36px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Celdas con dato principal y secundario */
+.celda-principal { display: inline; font-weight: 600; }
+.celda-sec { display: block; color: var(--tenue); font-size: .76rem; overflow-wrap: anywhere; }
+.admin tr.inactiva td { opacity: .62; }
+.admin .vacio.cargando { color: var(--acento); }
+.admin td.detalle { max-width: 280px; font-size: .74rem; color: var(--tenue); font-family: ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+.admin code.accion { color: #c7bcff; font-size: .78rem; white-space: nowrap; }
+
+/* Panel de métricas */
+.panel-pane { flex: 1 1 auto; min-height: 0; overflow: auto; padding-right: 4px; }
+.metricas { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 768px) { .metricas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.metrica {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px; min-width: 0;
+  background: #0a1434; border: 1px solid #1a2a60;
+}
+.metrica.ancha { grid-column: span 2; }
+.metrica-valor { font-size: 1.6rem; font-weight: 700; color: var(--acento); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.metrica.fecha .metrica-valor { font-size: 1.05rem; }
+.metrica-etq { font-size: .8rem; color: var(--texto); font-weight: 600; }
+.metrica-det { font-size: .74rem; color: var(--tenue); }
+.metricas[aria-busy="true"] { opacity: .6; }
+.registro { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: .8rem; }
+.registro li { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 6px 10px; border-radius: 10px; background: #0a1434; }
+.registro time { color: var(--tenue); font-variant-numeric: tabular-nums; }
+.registro .reg-etq { color: #c7bcff; font-family: ui-monospace, Consolas, monospace; }
+.registro .reg-txt { color: var(--texto); overflow-wrap: anywhere; }
+
+/* Código de un solo uso */
+.codigo-unico {
+  display: block; text-align: center; font-family: ui-monospace, Consolas, monospace; font-size: 1.9rem; font-weight: 700;
+  letter-spacing: .14em; padding: 14px; border-radius: 12px; color: #fff; background: #0a1434; border: 1px dashed var(--acento);
+  user-select: all;
+}
+
+@media (max-width: 575.98px) {
+  .admin-barra .form-control, .admin-barra .form-select { max-width: none; flex-basis: 45%; }
+  .metrica-valor { font-size: 1.35rem; }
+}

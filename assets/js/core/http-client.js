@@ -12,7 +12,7 @@ export class ApiError extends Error {
     super(mensaje);
     this.name = "ApiError";
     this.status = status;
-    this.tipo = tipo;        // RED | TIMEOUT | CANCELADO | HTTP | SIN_CLAVE | RESPUESTA
+    this.tipo = tipo;        // RED | TIMEOUT | CANCELADO | HTTP | SIN_CLAVE | SIN_SESION | RESPUESTA
     this.detalle = detalle;
   }
 }
@@ -40,12 +40,13 @@ function extraerDetalle(data) {
 function mensajePorEstado(status, detalle) {
   switch (status) {
     case 400: return detalle || "La solicitud no es válida.";
-    case 401: return "Clave X-API-Key faltante o incorrecta.";
-    case 403: return "La clave no tiene permiso para esta acción (requiere administrador).";
+    case 401: return detalle || "Sin sesión válida o clave X-API-Key incorrecta.";
+    case 403: return detalle || "No tienes permiso para esta acción.";
     case 404: return detalle || "El recurso no existe.";
     case 409: return detalle || "La operación entra en conflicto con el estado actual.";
     case 422: return detalle ? "Datos no válidos · " + detalle : "Datos no válidos.";
-    case 503: return "Amazon RDS no está disponible en este momento.";
+    case 429: return detalle || "Demasiados intentos. Espera un momento y vuelve a probar.";
+    case 503: return detalle || "Amazon RDS no está disponible en este momento.";
     default:
       if (status >= 500) return "Error interno del servidor.";
       return detalle || `Respuesta inesperada (HTTP ${status}).`;
@@ -71,9 +72,10 @@ function crearSenal(timeoutMs, externa) {
 
 export class HttpClient {
   /**
-   * @param {{baseUrl: string, timeoutMs: number, obtenerClave: () => string, controlSinClave?: () => boolean}} opciones
+   * @param {{baseUrl: string, timeoutMs: number, obtenerClave: () => string, controlSinClave?: () => boolean,
+   *          sesion?: {token: () => string, recuperable: () => boolean, renovar: () => Promise<any>}}} opciones
    */
-  constructor({ baseUrl, timeoutMs, obtenerClave, controlSinClave }) {
+  constructor({ baseUrl, timeoutMs, obtenerClave, controlSinClave, sesion }) {
     const base = new URL(baseUrl);
     if (base.protocol !== "https:" && location.protocol === "https:") {
       // Una página HTTPS no puede llamar a HTTP (mixed content).
@@ -83,13 +85,50 @@ export class HttpClient {
     this.timeoutMs = timeoutMs;
     this.obtenerClave = obtenerClave;
     this.controlSinClave = controlSinClave;
+    this.sesion = sesion;
+  }
+
+  /** Token de acceso vigente; si caducó pero hay token de renovación, lo renueva antes. */
+  async tokenVigente() {
+    if (!this.sesion) return "";
+    let t = this.sesion.token();
+    if (!t && this.sesion.recuperable()) {
+      try { await this.sesion.renovar(); } catch { return ""; }
+      t = this.sesion.token();
+    }
+    return t;
   }
 
   /**
    * @param {string} ruta Ruta absoluta del backend, p. ej. "/vehiculos/1/comandos".
-   * @param {{method?: string, body?: object, auth?: boolean|"control", signal?: AbortSignal, timeoutMs?: number}} op
+   * @param {{method?: string, body?: object, auth?: boolean|"control"|"sesion", signal?: AbortSignal, timeoutMs?: number}} op
+   *   auth:
+   *   - false: sin credenciales.
+   *   - "sesion": token Bearer obligatorio (rutas /auth, /mis-vehiculos, /admin).
+   *     En /admin, si no hay sesión pero sí clave, se usa la clave (transición).
+   *   - true: clave X-API-Key; si no hay clave, el token de un administrador (Etapa 5).
+   *   - "control": clave, o nada si el backend tiene el control abierto (sin token:
+   *     Control y Monitoreo no cambian en esta etapa).
    */
-  async request(ruta, { method = "GET", body, auth = false, clave: claveExplicita, signal, timeoutMs } = {}) {
+  async request(ruta, op = {}) {
+    const { auth = false, _reintento = false } = op;
+    const usaToken = { valor: false };
+    try {
+      return await this.enviar(ruta, op, usaToken);
+    } catch (e) {
+      // Token vencido o revocado en el servidor: se renueva UNA vez y se repite la petición.
+      if (e.status === 401 && usaToken.valor && !_reintento && this.sesion?.recuperable()) {
+        try { await this.sesion.renovar(); } catch { throw e; }
+        return this.request(ruta, { ...op, _reintento: true });
+      }
+      if (e.status === 401 && auth === "sesion" && !usaToken.valor && !this.obtenerClave()) {
+        throw new ApiError("Inicia sesión para continuar.", { status: 401, tipo: "SIN_SESION" });
+      }
+      throw e;
+    }
+  }
+
+  async enviar(ruta, { method = "GET", body, auth = false, clave: claveExplicita, signal, timeoutMs, permitirClave = false } = {}, usaToken = {}) {
     if (!METODOS.has(method)) throw new ApiError("Método HTTP no permitido.", { tipo: "CLIENTE" });
     if (typeof ruta !== "string" || !ruta.startsWith("/")) {
       throw new ApiError("Ruta de API inválida.", { tipo: "CLIENTE" });
@@ -100,12 +139,23 @@ export class HttpClient {
 
     const headers = { Accept: "application/json" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
-    if (auth) {
+    if (auth === "sesion") {
+      const token = await this.tokenVigente();
+      const clave = permitirClave ? this.obtenerClave() : "";
+      if (token) { headers.Authorization = `Bearer ${token}`; usaToken.valor = true; }
+      else if (clave) headers["X-API-Key"] = clave;
+      else throw new ApiError("Inicia sesión para continuar.", { status: 401, tipo: "SIN_SESION" });
+    } else if (auth) {
       const clave = claveExplicita ?? this.obtenerClave();
       // auth "control": sin clave se permite si el backend tiene el control abierto (lo decide el backend).
       const sinClaveValido = auth === "control" && this.controlSinClave?.();
-      if (!clave && !sinClaveValido) throw new ApiError("Falta la clave de operador (X-API-Key).", { status: 401, tipo: "SIN_CLAVE" });
       if (clave) headers["X-API-Key"] = clave;
+      else if (auth === true && this.sesion?.token && (await this.tokenVigente())) {
+        headers.Authorization = `Bearer ${this.sesion.token()}`;
+        usaToken.valor = true;
+      } else if (!sinClaveValido) {
+        throw new ApiError("Inicia sesión como administrador o escribe la clave X-API-Key.", { status: 401, tipo: "SIN_CLAVE" });
+      }
     }
 
     const senal = crearSenal(timeoutMs ?? this.timeoutMs, signal);
