@@ -18,7 +18,7 @@ import { claveStore } from "../core/clave-store.js";
 import { sesionStore } from "../core/sesion-store.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { abrirModal, campo, confirmar, leerFormulario } from "../ui/modales.js";
-import { montarAcceso, montarBotonSesion } from "../ui/sesion-ui.js";
+import { dialogoAcceso, montarAcceso, montarBotonSesion } from "../ui/sesion-ui.js";
 import { $, el, icono, toast } from "../ui/dom.js";
 import { fecha, insigniaEstado } from "../ui/admin-ui.js";
 import { iniciarConectividad } from "./comun.js";
@@ -381,6 +381,7 @@ async function aplicarVista() {
   $("vistaComprador").hidden = vista !== "comprador";
   $("vistaAdmin").hidden = !["admin", "operador"].includes(vista);
   document.querySelectorAll("#vistaAdmin .solo-admin").forEach((n) => n.classList.toggle("d-none", vista === "operador"));
+  $("avisoOperador").hidden = vista !== "operador";
   $("contenido").removeAttribute("aria-busy");
 
   if (vista === "acceso") { setTimeout(() => $("accesoCorreo")?.focus(), 50); return; }
@@ -400,6 +401,7 @@ const { ws } = iniciarConectividad({ barra: true });
   ws.conectar();
   montarAcceso($("vistaAcceso"));
   montarBotonSesion($("btnSesion"));
+  $("btnAvisoEntrar").addEventListener("click", dialogoAcceso);
   sesionStore.alCambiar(() => { aplicarVista(); });
   claveStore.alCambiar(() => { aplicarVista(); });
   await Promise.all([auth.recuperar(), inicializarClave()]);

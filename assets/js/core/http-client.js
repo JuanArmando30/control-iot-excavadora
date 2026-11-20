@@ -149,11 +149,12 @@ export class HttpClient {
       const clave = claveExplicita ?? this.obtenerClave();
       // auth "control": sin clave se permite si el backend tiene el control abierto (lo decide el backend).
       const sinClaveValido = auth === "control" && this.controlSinClave?.();
-      if (clave) headers["X-API-Key"] = clave;
-      else if (auth === true && this.sesion?.token && (await this.tokenVigente())) {
-        headers.Authorization = `Bearer ${this.sesion.token()}`;
-        usaToken.valor = true;
-      } else if (!sinClaveValido) {
+      // Escrituras del catálogo: con sesión manda el token (quién eres, queda auditado);
+      // si no hay sesión, la clave (transición). Control ("control") sigue usando solo la clave.
+      const token = auth === true && !claveExplicita ? await this.tokenVigente() : "";
+      if (token) { headers.Authorization = `Bearer ${token}`; usaToken.valor = true; }
+      else if (clave) headers["X-API-Key"] = clave;
+      else if (!sinClaveValido) {
         throw new ApiError("Inicia sesión como administrador o escribe la clave X-API-Key.", { status: 401, tipo: "SIN_CLAVE" });
       }
     }

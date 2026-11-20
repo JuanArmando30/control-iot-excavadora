@@ -138,6 +138,36 @@ export function dialogoCambiarContrasena() {
   });
 }
 
+/** Inicio de sesión en ventana: cuando la tarjeta de acceso no está a la vista
+ *  (p. ej. se entró con la clave de operador guardada). */
+export function dialogoAcceso() {
+  abrirModal({
+    titulo: "Iniciar sesión",
+    cuerpo: [
+      campo({ nombre: "correo", etiqueta: "Correo", tipo: "email", requerido: true, maxLength: 254 }),
+      campo({ nombre: "contrasena", etiqueta: "Contraseña", tipo: "password", requerido: true, maxLength: 128 }),
+    ],
+    acciones: [
+      { texto: "Tengo un código", clase: "btn-outline-info me-auto", alPulsar: ({ form }) => {
+        const correo = form.elements.correo.value.trim();
+        setTimeout(() => dialogoRestablecer(correo), 350);
+      } },
+      { texto: "Cancelar", clase: "btn-outline-secondary" },
+      {
+        texto: "Entrar", clase: "btn-primary", tipo: "submit",
+        alPulsar: async ({ form }) => {
+          const u = await auth.iniciar(form.elements.correo.value.trim(), form.elements.contrasena.value);
+          toast(`Hola, ${u.nombre}.`, "ok");
+        },
+      },
+    ],
+    alAbrir: ({ form }) => {
+      form.elements.correo.setAttribute("autocomplete", "username");
+      form.elements.contrasena.setAttribute("autocomplete", "current-password");
+    },
+  });
+}
+
 /* ----------------------------- Botón de usuario ----------------------------- */
 
 function menuUsuario() {
@@ -173,8 +203,10 @@ export function montarBotonSesion(boton) {
     boton.setAttribute("aria-label", u ? `Sesión de ${u.nombre} (${ROL[u.rol] || u.rol}). Abrir menú` : "Iniciar sesión");
   };
   boton.addEventListener("click", () => {
-    if (sesionStore.usuario()) menuUsuario();
-    else $("accesoCorreo")?.focus();
+    if (sesionStore.usuario()) { menuUsuario(); return; }
+    const correo = $("accesoCorreo");
+    if (correo && correo.offsetParent !== null) correo.focus();     // la tarjeta de acceso está a la vista
+    else dialogoAcceso();
   });
   sesionStore.alCambiar(pintar);
   pintar();

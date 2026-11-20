@@ -1228,3 +1228,4 @@ body {
   .admin-barra .form-control, .admin-barra .form-select { max-width: none; flex-basis: 45%; }
   .metrica-valor { font-size: 1.35rem; }
 }
+.aviso-operador { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 8px; font-size: .84rem; }
