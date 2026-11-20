@@ -16,20 +16,24 @@ export const WS = Object.freeze({
 });
 
 const CIERRE_NO_ENCONTRADO = 4404;
+const CIERRE_PROHIBIDO = 4403;        // sin permiso para la unidad (o permiso revocado): no se reintenta
 const CIERRE_SIN_PONG = 4000;
 
 export class WsClient extends EventTarget {
   /**
    * @param {{url: string, idVehiculo: number, pingMs: number, pongMaxMs: number,
-   *          baseMs: number, maxMs: number}} op
+   *          baseMs: number, maxMs: number, obtenerTicket?: () => Promise<string|null>}} op
+   *   obtenerTicket (Etapa 8): pide un ticket de un solo uso antes de CADA conexión
+   *   (POST /ws/ticket). null = conectar sin ticket (transición WS_ABIERTO).
    */
-  constructor({ url, idVehiculo, pingMs, pongMaxMs, baseMs, maxMs }) {
+  constructor({ url, idVehiculo, pingMs, pongMaxMs, baseMs, maxMs, obtenerTicket = null }) {
     super();
     const u = new URL(url);
     if (u.protocol !== "wss:" && location.protocol === "https:") {
       throw new Error("El WebSocket debe usar WSS en una página HTTPS.");
     }
-    Object.assign(this, { url: u.href, idVehiculo, pingMs, pongMaxMs, baseMs, maxMs });
+    Object.assign(this, { url: u.href, idVehiculo, pingMs, pongMaxMs, baseMs, maxMs, obtenerTicket });
+    this.generacion = 0;
     this.ws = null;
     this.estado = WS.CERRADO;
     this.intentos = 0;
@@ -57,13 +61,33 @@ export class WsClient extends EventTarget {
     this._estado(WS.CERRADO, "Cerrado por el usuario");
   }
 
-  _abrir(estadoInicial) {
+  async _abrir(estadoInicial) {
     this._limpiar();
     if (this.ws) { this.ws.onclose = null; try { this.ws.close(); } catch { /* */ } }
+    this.ws = null;
+    const generacion = ++this.generacion;
+
+    let url = this.url;
+    if (this.obtenerTicket) {
+      this._estado(estadoInicial, "Pidiendo permiso para la unidad…");
+      try {
+        const ticket = await this.obtenerTicket();
+        if (ticket) url = `${this.url}?ticket=${encodeURIComponent(ticket)}`;
+      } catch (e) {
+        if (generacion !== this.generacion || this.manual) return;
+        if (e?.status === 401 || e?.status === 403) {
+          this._estado(WS.CERRADO, e.status === 403 ? "Sin permiso para esta unidad" : "Inicia sesión para recibir eventos");
+          return;
+        }
+        this._reintentar(`Sin ticket (${e?.message || "red"})`);
+        return;
+      }
+      if (generacion !== this.generacion || this.manual) return;     // otra apertura empezó mientras tanto
+    }
 
     let ws;
     try {
-      ws = new WebSocket(this.url);
+      ws = new WebSocket(url);
     } catch (e) {
       this._estado(WS.CERRADO, "URL de WebSocket inválida");
       return;
@@ -99,11 +123,19 @@ export class WsClient extends EventTarget {
         this._estado(WS.CERRADO, "El vehículo no existe (código 4404)");
         return;
       }
-      const espera = this._espera();
-      this.proximoIntento = Date.now() + espera;
-      this._estado(WS.ESPERANDO, `Código ${ev.code || "—"} · reintento en ${Math.ceil(espera / 1000)} s`);
-      this.timers.reconexion = setTimeout(() => this._abrir(WS.RECONECTANDO), espera);
+      if (ev.code === CIERRE_PROHIBIDO) {
+        this._estado(WS.CERRADO, "Sin permiso para esta unidad (4403)");
+        return;
+      }
+      this._reintentar(`Código ${ev.code || "—"}`);
     };
+  }
+
+  _reintentar(motivo) {
+    const espera = this._espera();
+    this.proximoIntento = Date.now() + espera;
+    this._estado(WS.ESPERANDO, `${motivo} · reintento en ${Math.ceil(espera / 1000)} s`);
+    this.timers.reconexion = setTimeout(() => this._abrir(WS.RECONECTANDO), espera);
   }
 
   /**

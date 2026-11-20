@@ -5,9 +5,10 @@
  */
 
 export class DemoService extends EventTarget {
-  constructor({ api, vehiculoId }) {
+  /** `listar` (Etapa 8): para el dueño, sus DEMO privadas además de las de fábrica. */
+  constructor({ api, vehiculoId, listar = null }) {
     super();
-    Object.assign(this, { api, vehiculoId });
+    Object.assign(this, { api, vehiculoId, listar });
     this.demos = [];
     this.estado = this._vacio();
     this.solicitando = false;     // POST iniciar/cancelar en curso
@@ -20,7 +21,8 @@ export class DemoService extends EventTarget {
   get activa() { return this.estado.activa; }
 
   async cargar() {
-    this.demos = (await this.api.demos(this.vehiculoId)).filter((d) => d.activo);
+    const lista = this.listar ? await this.listar() : await this.api.demos(this.vehiculoId);
+    this.demos = lista.filter((d) => d.activo);
     this._emitir();
     return this.demos;
   }

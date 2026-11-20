@@ -66,6 +66,10 @@ const RUTAS = Object.freeze({
   invTerminar: () => "/invitado/terminar",
   adminExhibicion: (v) => `/admin/unidades/${v}/exhibicion`,
   adminExhibicionTerminar: (v) => `/admin/unidades/${v}/exhibicion/terminar`,
+  // Tiempo real y dispositivo (Etapa 8)
+  wsTicket: () => "/ws/ticket",
+  adminDispositivo: (v) => `/admin/unidades/${v}/dispositivo`,
+  adminDispositivoRevocar: (v) => `/admin/unidades/${v}/dispositivo/revocar`,
   // Administración (Etapa 3 · app/api/routes/admin.py)
   adminMetricas: () => "/admin/metricas",
   adminModelos: () => "/admin/modelos",

@@ -64,6 +64,11 @@ export const admin = {
   cambiarExhibicion: (v, abierta, horas = 2) => post(R.adminExhibicion(id(v)), { abierta, horas }).then(V.fila),
   terminarReserva: (v) => post(R.adminExhibicionTerminar(id(v))).then(V.fila),
 
+  /* ---- Dispositivo: credencial del ESP32 (Etapa 8) ---- */
+  dispositivo: (v) => get(R.adminDispositivo(id(v))).then(V.fila),
+  crearCredencial: (v) => post(R.adminDispositivo(id(v))).then(V.fila),
+  revocarCredencial: (v) => post(R.adminDispositivoRevocar(id(v))).then(V.fila),
+
   /* ---- Bitácora ---- */
   auditoria: (f) => get(conFiltros(R.adminAuditoria(), f)).then(V.pagina),
 };

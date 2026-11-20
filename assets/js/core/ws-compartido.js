@@ -42,7 +42,9 @@ export class WsCompartido extends EventTarget {
     this.ultimoLatido = 0;
     this.espera = null;            // AbortController de la petición del candado en cola
     this.timers = { latido: null, vigia: null };
-    this.nombre = `vehiculoIot-ws-${opciones.idVehiculo}`;
+    // Solo comparten conexión las pestañas con la MISMA identidad (Etapa 8): una pestaña
+    // anónima nunca recibe los eventos de la conexión autorizada de un dueño, ni al revés.
+    this.nombre = `vehiculoIot-ws-${opciones.idVehiculo}-${opciones.identidad || "anonimo"}`;
   }
 
   get rol() { return this.lider ? "líder" : "compartida"; }

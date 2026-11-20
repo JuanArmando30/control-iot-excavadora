@@ -9,6 +9,8 @@
  *   (mover, DEMO) sin clave. No se guarda nada: se comprueba en cada carga.
  *   Crear, editar y eliminar siguen necesitando una clave real.
  */
+import { sesionStore } from "./sesion-store.js";
+
 const LLAVE = "vehiculoIot.claveApi";
 const LLAVE_ROL = "vehiculoIot.rol";
 // Valor seguro para una cabecera HTTP: ASCII visible, sin espacios.
@@ -31,10 +33,11 @@ export const claveStore = {
   /** Clave real escrita por el usuario ("" si no hay). */
   obtener: () => memoria,
   rol: () => rol,
-  /** ¿Puede mover el vehículo e iniciar/cancelar DEMO? (clave real o control abierto) */
-  puedeControlar: () => !!memoria || abierto,
-  /** true si controla SIN clave porque el backend tiene el control abierto. */
-  esAbierto: () => !memoria && abierto,
+  /** ¿Puede mover el vehículo e iniciar/cancelar DEMO? (sesión, clave real o control abierto).
+   *  Con sesión, el servidor decide por unidad (dueño; empresa según estado/soporte). */
+  puedeControlar: () => sesionStore.activa() || !!memoria || abierto,
+  /** true si controla SIN clave ni sesión porque el backend tiene el control abierto. */
+  esAbierto: () => !sesionStore.activa() && !memoria && abierto,
   fijarAbierto(valor) {
     if (abierto === !!valor) return;
     abierto = !!valor;

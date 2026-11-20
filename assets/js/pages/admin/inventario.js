@@ -70,6 +70,9 @@ export function crearInventario({ alCambiar }) {
     } else if (u.activo && ["inventario", "exhibicion"].includes(u.estado_comercial)) {
       acciones.push(boton("Asignar", "i-link", "btn-outline-success", () => asignar(u), `Asignar ${u.nombre} a un cliente`));
     }
+    if (u.estado_comercial !== "baja") {
+      acciones.push(boton("Dispositivo", "i-wifi", "btn-outline-light", () => dispositivo(u), `Credencial del ESP32 de ${u.nombre}`));
+    }
     if (u.estado_comercial === "exhibicion" && u.activo) {
       acciones.push(boton("Invitados", "i-user", "btn-outline-warning", () => exhibicion(u), `Exhibición para invitados de ${u.nombre}`));
     }
@@ -158,6 +161,64 @@ export function crearInventario({ alCambiar }) {
       await cargar();
       alCambiar();
     }, { textoGuardar: "Finalizar asignación", nota: `Propietario actual: ${u.propietario || "—"}. Su historial se conserva.` });
+  }
+
+  /** Credencial del ESP32 (Etapa 8): sin ella, con WS_ABIERTO=false, la unidad no recibe órdenes. */
+  async function dispositivo(u) {
+    let d;
+    try { d = await admin.dispositivo(u.id_vehiculo); } catch (err) { toast(err.message, "error"); return; }
+    const c = d.credencial;
+    const lineas = [
+      d.conectado ? "El ESP32 está CONECTADO ahora con su credencial." : "El ESP32 no está conectado con credencial en este momento.",
+      c ? `Credencial #${c.id_credencial} · ${c.vigente ? "vigente" : "revocada"} · creada ${fechaHora(c.creada_en)}`
+        + `${c.ultimo_uso ? ` · último uso ${fechaHora(c.ultimo_uso)}` : " · aún sin usar"}` : "Esta unidad todavía no tiene credencial.",
+      d.ws_abierto ? "El servidor aún acepta conexiones sin credencial (WS_ABIERTO=true, transición)."
+        : "El servidor exige credencial: sin ella el ESP32 no recibe órdenes.",
+    ];
+    const acciones = [{ texto: "Cerrar", clase: "btn-outline-secondary" }];
+    if (c?.vigente) {
+      acciones.unshift({ texto: "Revocar", clase: "btn-outline-danger me-auto", alPulsar: async () => {
+        try { await admin.revocarCredencial(u.id_vehiculo); toast("Credencial revocada: el ESP32 quedó desconectado.", "ok"); } catch (err) { toast(err.message, "error"); }
+      } });
+    }
+    acciones.push({ texto: c?.vigente ? "Generar otra" : "Generar credencial", clase: "btn-primary", alPulsar: async () => {
+      try {
+        const r = await admin.crearCredencial(u.id_vehiculo);
+        setTimeout(() => mostrarSecreto(u, r.secreto), 350);
+      } catch (err) { toast(err.message, "error"); }
+    } });
+    abrirModal({
+      titulo: `ESP32 · ${u.nombre}`,
+      cuerpo: [
+        ...lineas.map((t) => el("p", { class: "small mb-2", text: t })),
+        el("p", { class: "alert alert-warning py-2 small mb-0", text:
+          "Generar una credencial nueva revoca la anterior: el ESP32 con la vieja se desconecta hasta que le cargues la nueva." }),
+      ],
+      acciones,
+    });
+  }
+
+  function mostrarSecreto(u, secreto) {
+    abrirModal({
+      titulo: `Credencial del ESP32 · ${u.nombre}`,
+      cuerpo: [
+        el("p", { class: "small", text: "Se muestra solo ahora (en la base solo queda su huella). En el firmware:" }),
+        el("ol", { class: "small" }, [
+          el("li", { text: "Copia secretos.ejemplo.h como secretos.h (misma carpeta del .ino)." }),
+          el("li", { text: "Pega la credencial entre las comillas de TOKEN_DISPOSITIVO." }),
+          el("li", { text: `Verifica que ID_VEHICULO sea ${u.id_vehiculo}, compila y sube el firmware.` }),
+        ]),
+        el("output", { class: "codigo-unico codigo-largo", text: secreto }),
+        el("p", { class: "alert alert-warning py-2 small mt-3 mb-0", text: "No la subas al repositorio ni la compartas. Si se filtra, revócala y genera otra." }),
+      ],
+      acciones: [
+        { texto: "Copiar", clase: "btn-outline-info me-auto", alPulsar: async () => {
+          try { await navigator.clipboard.writeText(secreto); toast("Credencial copiada.", "ok"); } catch { toast("No se pudo copiar: selecciónala a mano.", "error"); }
+          return false;
+        } },
+        { texto: "Listo", clase: "btn-primary" },
+      ],
+    });
   }
 
   /** Interruptor de exhibición: los invitados solo reservan cuando la empresa lo abre (Etapa 7). */

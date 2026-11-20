@@ -19,9 +19,12 @@ import { DemoService } from "../domain/demo-service.js";
 import { UltimoMovimiento, HistorialReciente, FUENTE } from "../domain/monitoreo-estado.js";
 import { inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, hora, icono } from "../ui/dom.js";
-import { iniciarConectividad, textoEvento } from "./comun.js";
+import { elegirUnidad, identidadWs, resolverUnidad } from "../core/unidad-activa.js";
+import { iniciarConectividad, montarSelectorUnidad, textoEvento } from "./comun.js";
 
-const V = CONFIG.vehiculoId;
+/* Etapa 8: unidad de la sesión (o la de exhibición sin sesión). */
+const UNIDAD = await resolverUnidad();
+const V = UNIDAD.id;
 const MAX_EVENTOS = 200;
 const GRUPO = {
   estado_inicial: "estado", estado_actualizado: "estado", movimiento_individual: "movimiento",
@@ -34,7 +37,7 @@ const fecha = (ms) => (ms == null ? "—" : FMT_FECHA.format(ms));
 const horaDe = (ms) => (ms == null ? "—" : FMT_HORA.format(ms));
 const etiqueta = (nombre) => (nombre ? Catalogo.etiqueta({ nombre }) : "Comando sin nombre");
 
-const { ws } = iniciarConectividad();
+const { ws } = iniciarConectividad({ idVehiculo: V, identidad: identidadWs() });
 const demo = new DemoService({ api, vehiculoId: V });
 const ultimo = new UltimoMovimiento();
 const historial = new HistorialReciente(10);
@@ -326,6 +329,7 @@ $("btnHistorial").addEventListener("click", () => cargarHistorial());
 $("wsUrl").textContent = CONFIG.wsUrl(V);
 
 (async function iniciar() {
+  montarSelectorUnidad(UNIDAD, elegirUnidad);
   inicializarClave();
   pintarUltimo();
   pintarTablaMensaje("cargando", "Cargando historial…");

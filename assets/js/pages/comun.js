@@ -13,7 +13,8 @@ import { $, toast } from "../ui/dom.js";
  * @param {{compacto?: boolean, barra?: boolean}} op `barra`: indicadores
  *   discretos dentro del menú superior (Control) en lugar del panel completo.
  */
-export function iniciarConectividad({ compacto = false, barra = false } = {}) {
+export function iniciarConectividad({ compacto = false, barra = false, idVehiculo = CONFIG.vehiculoId,
+  obtenerTicket = () => api.ticketWs(idVehiculo), identidad = "anonimo" } = {}) {
   const t = CONFIG.tiempos;
   const conectividad = new ConectividadService({ api, intervaloMs: t.saludCadaMs });
   if (barra) new EstadoBarra($("panelConectividad"), conectividad);
@@ -21,8 +22,10 @@ export function iniciarConectividad({ compacto = false, barra = false } = {}) {
 
   // Una sola conexión WSS por navegador, compartida entre pestañas de Control y Monitoreo.
   const ws = new WsCompartido({
-    url: CONFIG.wsUrl(CONFIG.vehiculoId),
-    idVehiculo: CONFIG.vehiculoId,
+    url: CONFIG.wsUrl(idVehiculo),
+    idVehiculo,
+    identidad,
+    obtenerTicket,                 // Etapa 8: ticket de un solo uso antes de cada conexión
     pingMs: t.wsPingMs,
     pongMaxMs: t.wsPongMaxMs,
     baseMs: t.wsReconexionBaseMs,
@@ -33,15 +36,15 @@ export function iniciarConectividad({ compacto = false, barra = false } = {}) {
   return { conectividad, ws };
 }
 
-export async function pintarVehiculo() {
+export async function pintarVehiculo(idVehiculo = CONFIG.vehiculoId) {
   const destino = $("vehiculoNombre");
   try {
-    const v = await api.vehiculo(CONFIG.vehiculoId);
+    const v = await api.vehiculo(idVehiculo);
     destino.textContent = `${v.nombre} · ${v.microcontrolador || "IoT"} · #${v.id_vehiculo}`;
     if (!v.activo) toast("El vehículo está marcado como inactivo en la base de datos.", "error");
     return v;
   } catch (e) {
-    destino.textContent = `Vehículo #${CONFIG.vehiculoId}`;
+    destino.textContent = `Vehículo #${idVehiculo}`;
     return null;
   }
 }
@@ -61,4 +64,23 @@ export function textoEvento(ev) {
     case "pong": return "pong";
     default: return ev.evento;
   }
+}
+
+/**
+ * Selector de unidad en el encabezado (Etapa 8): aparece si hay más de una
+ * unidad para elegir. Cambiar de unidad recarga la página con la nueva.
+ */
+export function montarSelectorUnidad(unidad, elegir) {
+  const sel = $("selUnidad");
+  if (!sel) return;
+  if (unidad.opciones.length < 2) { sel.hidden = true; return; }
+  sel.replaceChildren(...unidad.opciones.map((o) => {
+    const op = document.createElement("option");
+    op.value = String(o.id);
+    op.textContent = o.nombre || `Unidad #${o.id}`;
+    op.selected = o.id === unidad.id;
+    return op;
+  }));
+  sel.hidden = false;
+  sel.addEventListener("change", () => elegir(Number.parseInt(sel.value, 10)));
 }

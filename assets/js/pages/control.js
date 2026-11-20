@@ -26,9 +26,15 @@ import { Tactil } from "../ui/tactil.js";
 import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, toast, vibrar, avisoEstado } from "../ui/dom.js";
 import { abrirModal } from "../ui/modales.js";
-import { iniciarConectividad, pintarVehiculo } from "./comun.js";
+import { mio } from "../api/auth-api.js";
+import { elegirUnidad, identidadWs, resolverUnidad } from "../core/unidad-activa.js";
+import { iniciarConectividad, montarSelectorUnidad, pintarVehiculo } from "./comun.js";
 
-const V = CONFIG.vehiculoId;
+/* Etapa 8: la unidad sale de la sesión (dueño: las suyas; empresa: su inventario;
+   sin sesión: la de exhibición). Con sesión, el servidor autoriza por unidad. */
+const UNIDAD = await resolverUnidad();
+const V = UNIDAD.id;
+const ES_DUENO = UNIDAD.usuario?.rol === "usuario" && UNIDAD.opciones.some((o) => o.id === V && o.nombre);
 const O = CONFIG.origen;
 const MODOS = ["pulso", "joystick", "voz", "giro", "ia", "tactil"];
 const AYUDA = {
@@ -49,11 +55,11 @@ let modo = leerModo();
 /** Dirección sostenida (Joystick o Giroscopio). Solo un mando a la vez (una orden en vuelo). */
 const mantener = { mando: null, dir: null, timer: null, origen: O.joystick };
 
-const demo = new DemoService({ api, vehiculoId: V });
+const demo = new DemoService({ api, vehiculoId: V, listar: ES_DUENO ? () => mio.demos(V) : null });
 const comandos = new ComandoService({
   api, vehiculoId: V, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa, wsActivo: () => wsAbierto,
 });
-const { ws } = iniciarConectividad({ barra: true });
+const { ws } = iniciarConectividad({ barra: true, idVehiculo: V, identidad: identidadWs() });
 /** Una sola línea de retroalimentación (sustituye a la lista de mensajes). */
 const log = (etq, txt) => {
   const p = $("lineaEstado");
@@ -426,7 +432,7 @@ function abrirPanelDemo() {
   const demos = demo.demos;
   const elegida = demoElegida();
   const crear = { texto: demos.length ? "Crear o editar" : "Crear DEMO", clase: "btn-outline-light me-auto",
-    alPulsar: () => { location.href = "administracion.html#demo"; } };
+    alPulsar: () => { location.href = ES_DUENO ? "administracion.html" : "administracion.html#demo"; } };
   if (!demos.length) {
     abrirModal({
       titulo: "DEMO",
@@ -470,6 +476,13 @@ function abrirPanelDemo() {
     alAbrir: () => {
       // Número de pasos y duración aproximada de cada DEMO (consulta sin clave).
       for (const d of demos) {
+        if (d.pasos != null) {                     // la lista del dueño ya los trae (incluye sus DEMO privadas)
+          const n = pasos.get(d.id_demo);
+          const seg = d.duracion_total_ms / 1000;
+          if (!d.pasos) { n.textContent = "Sin pasos: agrégalos en Mis vehículos"; n.closest("label").querySelector("input").disabled = true; }
+          else n.textContent = `${d.pasos} paso${d.pasos === 1 ? "" : "s"} · ~${seg.toFixed(seg < 10 ? 1 : 0)} s${d.ambito === "privada" ? " · propia" : ""}`;
+          continue;
+        }
         api.movimientosDemo(V, d.id_demo).then((m) => {
           const seg = m.reduce((t, x) => t + x.duracion_ms + x.pausa_ms, 0) / 1000;
           const n = pasos.get(d.id_demo);
@@ -558,6 +571,14 @@ ws.addEventListener("mensaje", (e) => {
     alternarInterruptor(ev.codigo, { avisar: ev.evento === "movimiento_individual" });   // la DEMO no llena de avisos
   }
   if (ev.evento === "movimiento_individual") botonera.marcarActivo(ev.codigo);
+  // Etapa 8: solicitado (envío) → aceptado (API) → REPORTADO (lo dice el ESP32, no la API).
+  if (ev.evento === "reporte_dispositivo") {
+    if (!ev.datos.accion) return;                       // reporte desconocido: no se supone nada
+    if (ev.codigo != null && ev.datos.accion === "ejecutando") botonera.marcarReportado(ev.codigo);
+    const que = ev.datos.accion === "detenido" ? "detenida" : ev.datos.accion === "ignorado" ? `ignoró ${nombreCodigo(ev.codigo)}` : `ejecuta ${nombreCodigo(ev.codigo)}`;
+    log("Unidad", `reporta: ${que}${ev.datos.duracion_ms ? ` (${ev.datos.duracion_ms} ms)` : ""}`);
+    return;
+  }
   if (ev.evento === "demo_movimiento" && ev.codigo != null) {
     demoVisor.paso({ codigo: ev.codigo, comando: ev.comando, orden: ev.datos.orden, total: ev.datos.total_movimientos, duracionMs: ev.datos.duracion_ms });
   }
@@ -741,7 +762,9 @@ async function sincronizarDemo() {
   setModo(modo);
   botonera.render(catalogo);
   await inicializarClave();
-  await Promise.all([pintarVehiculo(), cargarCatalogo(), sincronizarDemo(), cargarDemos()]);
+  montarSelectorUnidad(UNIDAD, elegirUnidad);
+  if (UNIDAD.aviso) toast(UNIDAD.aviso, "info");
+  await Promise.all([pintarVehiculo(V), cargarCatalogo(), sincronizarDemo(), cargarDemos()]);
   ws.conectar();
   if (!claveStore.puedeControlar()) abrirDialogoClave({ motivo: "Para mover el vehículo necesitas la clave de operador." });
 })();

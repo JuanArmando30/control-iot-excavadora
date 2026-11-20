@@ -37,6 +37,12 @@ export const invitado = {
   },
 
   estado: () => http.get(R.invEstado(), conToken()).then((r) => V.fila(r.data)),
+  /** Ticket del WebSocket de SU unidad reservada (Etapa 8); sin reserva, null. */
+  ticketWs: async (v) => {
+    if (!token) return null;
+    const r = await http.post(R.wsTicket(), { id_vehiculo: id(v) }, conToken());
+    return typeof r.data?.ticket === "string" ? r.data.ticket : null;
+  },
   latido: () => http.post(R.invLatido(), undefined, conToken()).then((r) => V.fila(r.data)),
 
   async terminar() {

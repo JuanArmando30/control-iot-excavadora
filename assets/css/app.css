@@ -1307,3 +1307,12 @@ body {
 .btn-mando-inv:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
 .lista-demos-inv { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .lista-demos-inv li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: #0a1434; }
+
+/* ==========================================================================
+   Etapa 8 · Unidad activa y reporte de la unidad
+   ========================================================================== */
+.sel-unidad { width: auto; max-width: 200px; min-width: 0; }
+@media (max-width: 575.98px) { .sel-unidad { max-width: 130px; } }
+/* Tercer estado del botón: la UNIDAD reportó que lo ejecuta (no solo la API lo aceptó) */
+.is-reportado { box-shadow: 0 0 0 3px var(--ok), 0 0 18px #34e0a888 !important; }
+.codigo-largo { font-size: .95rem; letter-spacing: .02em; overflow-wrap: anywhere; }

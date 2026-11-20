@@ -229,7 +229,9 @@ const EVENTOS_WS = new Set([
   "estado_inicial", "estado_actualizado", "movimiento_individual",
   "demo_iniciada", "demo_movimiento", "demo_finalizada", "demo_cancelada",
   "error", "pong",
+  "reporte_dispositivo",          // Etapa 8: lo que la UNIDAD dice que hizo (no el acuse de la API)
 ]);
+const ACCIONES_REPORTE = new Set(["ejecutando", "detenido", "ignorado"]);
 
 /**
  * Formato común (app/websocket/eventos.py):
@@ -266,6 +268,9 @@ export function eventoWs(texto, idVehiculo) {
       codigo_error: textoONulo(d.codigo_error, 40),
       detalle: textoONulo(d.detalle, 220),
       mensaje: textoONulo(d.mensaje, 200),
+      // Etapa 8 · reporte_dispositivo: lo que la UNIDAD dice que hizo (solo valores conocidos)
+      accion: ACCIONES_REPORTE.has(d.accion) ? d.accion : null,
+      motivo: textoONulo(d.motivo, 60),
     },
   };
 }

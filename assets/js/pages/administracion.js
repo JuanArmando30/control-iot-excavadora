@@ -23,6 +23,7 @@ import { $, el, icono, toast } from "../ui/dom.js";
 import { abrirEditorDemo } from "../ui/editor-demo.js";
 import { admin } from "../api/admin-api.js";
 import { iniciarConectividad } from "./comun.js";
+import { identidadWs } from "../core/unidad-activa.js";
 import { crearComprador } from "./admin/comprador.js";
 import { crearPanel } from "./admin/panel.js";
 import { crearInventario } from "./admin/inventario.js";
@@ -398,15 +399,15 @@ async function aplicarVista() {
 }
 
 /* Indicadores WSS · AWS · RDS en el menú (igual que Control), con la conexión WSS compartida. */
-const { ws } = iniciarConectividad({ barra: true });
 
 (async function iniciar() {
-  ws.conectar();
   montarAcceso($("vistaAcceso"));
   montarBotonSesion($("btnSesion"));
   $("btnAvisoEntrar").addEventListener("click", dialogoAcceso);
   sesionStore.alCambiar(() => { aplicarVista(); });
   claveStore.alCambiar(() => { aplicarVista(); });
   await Promise.all([auth.recuperar(), inicializarClave()]);
+  // Indicadores WSS · AWS · RDS con la identidad ya conocida (ticket de la sesión o de la clave).
+  iniciarConectividad({ barra: true, identidad: identidadWs() }).ws.conectar();
   await aplicarVista();
 })();

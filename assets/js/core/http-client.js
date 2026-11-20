@@ -141,6 +141,12 @@ export class HttpClient {
     if (body !== undefined) headers["Content-Type"] = "application/json";
     // Invitado (Etapa 7): token de la reserva, solo en memoria, en su propia cabecera.
     if (invitado) headers["X-Invitado"] = invitado;
+    // Lecturas sin credencial explícita: si hay sesión se identifica (con LECTURA_ABIERTA=false el
+    // servidor lo exige; con true no cambia nada). Nunca para el invitado ni el inicio de sesión.
+    if (!auth && !invitado && method === "GET" && this.sesion?.token?.()) {
+      headers.Authorization = `Bearer ${this.sesion.token()}`;
+      usaToken.valor = true;
+    }
     if (auth === "sesion") {
       const token = await this.tokenVigente();
       const clave = permitirClave ? this.obtenerClave() : "";
@@ -151,9 +157,9 @@ export class HttpClient {
       const clave = claveExplicita ?? this.obtenerClave();
       // auth "control": sin clave se permite si el backend tiene el control abierto (lo decide el backend).
       const sinClaveValido = auth === "control" && this.controlSinClave?.();
-      // Escrituras del catálogo: con sesión manda el token (quién eres, queda auditado);
-      // si no hay sesión, la clave (transición). Control ("control") sigue usando solo la clave.
-      const token = auth === true && !claveExplicita ? await this.tokenVigente() : "";
+      // Con sesión manda el token: el servidor decide por unidad y queda auditado quién fue.
+      // Sin sesión: la clave (transición) o, en control, nada si el backend tiene el control abierto.
+      const token = !claveExplicita ? await this.tokenVigente() : "";
       if (token) { headers.Authorization = `Bearer ${token}`; usaToken.valor = true; }
       else if (clave) headers["X-API-Key"] = clave;
       else if (!sinClaveValido) {

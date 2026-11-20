@@ -56,6 +56,21 @@ export const api = {
     }
   },
   historial: (v) => datos(http.get(R.historial(id(v)))).then(V.historial),
+  /**
+   * Ticket de un solo uso para el WebSocket de la unidad (Etapa 8). Se identifica con la
+   * sesión, la reserva de invitado o la clave; sin nada solo sirve si el servidor tiene
+   * WS_ABIERTO=true (y entonces la conexión sin ticket también vale).
+   */
+  ticketWs: async (v, { invitado } = {}) => {
+    const op = invitado ? { invitado } : { auth: claveStore.obtener() || sesionStore.activa() ? true : false };
+    try {
+      const r = await http.post(R.wsTicket(), { id_vehiculo: id(v) }, op);
+      return typeof r.data?.ticket === "string" ? r.data.ticket : null;
+    } catch (e) {
+      if (e.tipo === "SIN_CLAVE") return null;
+      throw e;
+    }
+  },
   /** Límites de seguridad del modelo de la unidad (V011). */
   limites: (v) => datos(http.get(R.limites(id(v)))).then(V.fila),
 

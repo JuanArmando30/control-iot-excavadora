@@ -7,6 +7,7 @@ import { api } from "../api/vehiculo-api.js";
 import { claveStore } from "../core/clave-store.js";
 import { $, el, toast } from "./dom.js";
 import { abrirModal, campo } from "./modales.js";
+import { sesionStore } from "../core/sesion-store.js";
 
 const ROLES = { operador: "Operador", admin: "Administrador" };
 
@@ -14,6 +15,16 @@ const ROLES = { operador: "Operador", admin: "Administrador" };
 function pintarBoton() {
   const b = $("btnClave");
   if (!b) return;
+  const u = sesionStore.usuario();
+  if (u && !b.closest(".pagina-admin")) {
+    // Etapa 8: con sesión, Control y Monitoreo usan el token (el servidor decide por unidad).
+    b.querySelector("span").textContent = u.nombre.split(" ")[0];
+    b.classList.remove("btn-outline-warning", "btn-outline-info");
+    b.classList.add("btn-outline-success");
+    b.title = "Sesión iniciada. Pulsa para ver tu cuenta en Administración.";
+    b.setAttribute("aria-label", `Sesión de ${u.nombre}. Abrir Administración`);
+    return;
+  }
   const rol = claveStore.rol();
   const tiene = !!claveStore.obtener();
   const libre = claveStore.esAbierto();
@@ -62,7 +73,11 @@ export function abrirDialogoClave({ motivo = "" } = {}) {
 export async function inicializarClave() {
   pintarBoton();
   claveStore.alCambiar(pintarBoton);
-  $("btnClave")?.addEventListener("click", () => abrirDialogoClave());
+  sesionStore.alCambiar(pintarBoton);
+  $("btnClave")?.addEventListener("click", () => {
+    if (sesionStore.usuario() && !$("btnClave").closest(".pagina-admin")) { location.href = "administracion.html"; return; }
+    abrirDialogoClave();
+  });
   const clave = claveStore.obtener();
   if (!clave) { await comprobarControlAbierto(); return; }
   try {

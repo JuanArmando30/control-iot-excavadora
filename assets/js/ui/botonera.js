@@ -158,6 +158,13 @@ export class Botonera {
     }
   }
 
+  /** Marca brevemente que la UNIDAD (ESP32) informó que ejecutó el comando (Etapa 8). */
+  marcarReportado(codigo) {
+    const lista = this.botones.get(codigo) || [];
+    for (const b of lista) b.classList.add("is-reportado");
+    setTimeout(() => { for (const b of lista) b.classList.remove("is-reportado"); }, 1800);
+  }
+
   /** Marca brevemente el comando que el backend reporta por WebSocket. */
   marcarActivo(codigo) {
     for (const [c, lista] of this.botones) for (const b of lista) b.classList.toggle("is-activo", c === codigo);

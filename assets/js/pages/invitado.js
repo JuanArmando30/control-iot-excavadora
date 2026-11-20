@@ -228,7 +228,10 @@ document.addEventListener("keydown", (e) => {
 });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && reserva) latir(); });
 
-const { ws } = iniciarConectividad({ barra: true });
+const { ws } = iniciarConectividad({
+  barra: true, identidad: "invitado",
+  obtenerTicket: () => invitado.ticketWs(unidad?.id_vehiculo ?? CONFIG.vehiculoId),
+});
 ws.conectar();
 cargarCatalogo();
 tCatalogo = setInterval(cargarCatalogo, T.catalogoInvitadoMs);
