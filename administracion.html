@@ -67,12 +67,83 @@
     <section id="vistaAcceso" class="vista-acceso" aria-label="Iniciar sesión" hidden></section>
 
     <!-- ======================= Comprador (rol usuario) ======================= -->
-    <section id="vistaComprador" class="tarjeta vista-comprador" aria-labelledby="tComprador" hidden>
+    <section id="vistaComprador" class="tarjeta admin vista-comprador" aria-labelledby="tComprador" hidden>
       <div class="tarjeta-h">
         <h2 id="tComprador">Mis vehículos</h2>
+        <div class="d-flex gap-2 align-items-center">
+          <label class="small text-nowrap" for="selMiVehiculo">Unidad</label>
+          <select id="selMiVehiculo" class="form-select form-select-sm"></select>
+          <button id="btnRecargarMio" class="btn btn-sm btn-outline-light" type="button" aria-label="Recargar mi unidad">
+            <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-sync"/></svg>
+          </button>
+        </div>
       </div>
-      <p class="aviso">Administración es para la empresa. Aquí ves las unidades asignadas a tu cuenta; su control, monitoreo, configuración y editor de DEMO llegan en la siguiente etapa.</p>
-      <ul id="listaMisVehiculos" class="lista-mis" aria-live="polite"></ul>
+      <ul id="listaMisVehiculos" class="lista-mis" aria-live="polite" hidden></ul>
+
+      <div id="panelMio" class="panel-mio" hidden>
+        <ul class="nav nav-tabs" role="tablist" aria-label="Mi unidad">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-mi-demo" data-bs-toggle="tab" data-bs-target="#pnl-mi-demo" type="button" role="tab" aria-controls="pnl-mi-demo" aria-selected="true">DEMO</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-mi-unidad" data-bs-toggle="tab" data-bs-target="#pnl-mi-unidad" type="button" role="tab" aria-controls="pnl-mi-unidad" aria-selected="false">Unidad</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-mi-soporte" data-bs-toggle="tab" data-bs-target="#pnl-mi-soporte" type="button" role="tab" aria-controls="pnl-mi-soporte" aria-selected="false">Soporte</button>
+          </li>
+        </ul>
+        <div class="tab-content pt-3">
+          <!-- DEMO -->
+          <div class="tab-pane fade show active" id="pnl-mi-demo" role="tabpanel" aria-labelledby="tab-mi-demo" tabindex="0">
+            <div id="miEjecucion" class="aviso aviso-ejecucion" role="status" aria-live="polite" hidden></div>
+            <div class="admin-barra">
+              <p class="ayuda m-0">Las DEMO de fábrica son de la empresa; crea las tuyas y ordena sus pasos.</p>
+              <button id="btnNuevaMiDemo" class="btn btn-sm btn-primary" type="button">
+                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Nueva DEMO
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <caption class="visually-hidden">DEMO de la unidad</caption>
+                <thead><tr>
+                  <th scope="col">DEMO</th><th scope="col">Tipo</th><th scope="col" class="d-none d-sm-table-cell">Pasos</th>
+                  <th scope="col" class="d-none d-md-table-cell">Estado</th><th scope="col" class="text-end">Acciones</th>
+                </tr></thead>
+                <tbody id="tbMisDemos"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Unidad -->
+          <div class="tab-pane fade" id="pnl-mi-unidad" role="tabpanel" aria-labelledby="tab-mi-unidad" tabindex="0">
+            <div class="conf-pane">
+              <dl id="dlMiUnidad" class="kv mb-3"></dl>
+              <h3 class="subtitulo">Comandos de tu unidad</h3>
+              <ul id="listaMisComandos" class="chips"></ul>
+              <p class="ayuda">Control y Monitoreo de tus unidades con tu sesión llegan en la Etapa 8; hoy esas páginas operan la unidad de exhibición.</p>
+            </div>
+          </div>
+          <!-- Soporte -->
+          <div class="tab-pane fade" id="pnl-mi-soporte" role="tabpanel" aria-labelledby="tab-mi-soporte" tabindex="0">
+            <p class="aviso">La empresa NO puede operar tu unidad sin tu permiso. Si necesitas ayuda, autoriza el soporte por unas horas; puedes revocarlo cuando quieras y todo queda registrado.</p>
+            <div class="admin-barra">
+              <button id="btnRevocarSoporte" class="btn btn-sm btn-outline-danger" type="button">Revocar autorizaciones</button>
+              <button id="btnOtorgarSoporte" class="btn btn-sm btn-primary" type="button">
+                <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-key"/></svg> Autorizar soporte
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <caption class="visually-hidden">Autorizaciones de soporte</caption>
+                <thead><tr>
+                  <th scope="col">Para</th><th scope="col" class="d-none d-sm-table-cell">Motivo</th>
+                  <th scope="col">Vence</th><th scope="col">Estado</th>
+                </tr></thead>
+                <tbody id="tbSoporte"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ======================= Administrador ======================= -->
@@ -362,9 +433,15 @@
 
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <h3 id="tituloMovimientos" class="subtitulo m-0">Movimientos de la DEMO</h3>
-                <button id="btnNuevoMovimiento" class="btn btn-sm btn-primary" type="button" disabled>
-                  <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Paso
-                </button>
+                <div class="d-flex gap-2">
+                  <button id="btnEditorPasos" class="btn btn-sm btn-outline-info" type="button" disabled
+                          title="Editar, reordenar y validar todos los pasos con los límites del modelo">
+                    <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-list"/></svg> Editor
+                  </button>
+                  <button id="btnNuevoMovimiento" class="btn btn-sm btn-primary" type="button" disabled>
+                    <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-plus"/></svg> Paso
+                  </button>
+                </div>
               </div>
               <p id="totalMovimientos" class="ayuda mt-0"></p>
               <div class="table-responsive">

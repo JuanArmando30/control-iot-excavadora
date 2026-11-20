@@ -48,6 +48,16 @@ const RUTAS = Object.freeze({
   authRestablecer: () => "/auth/restablecer",
   authCambiar: () => "/auth/cambiar-contrasena",
   misVehiculos: () => "/mis-vehiculos",
+  // Comprador: soporte y DEMO propias (Etapas 4 y 6)
+  miSoporte: (v) => `/mis-vehiculos/${v}/soporte`,
+  miSoporteRevocar: (v) => `/mis-vehiculos/${v}/soporte/revocar`,
+  misDemos: (v) => `/mis-vehiculos/${v}/demos`,
+  miDemo: (v, d) => `/mis-vehiculos/${v}/demos/${d}`,
+  miDemoActualizar: (v, d) => `/mis-vehiculos/${v}/demos/${d}/actualizar`,
+  miDemoEliminar: (v, d) => `/mis-vehiculos/${v}/demos/${d}/eliminar`,
+  miDemoPasos: (v, d) => `/mis-vehiculos/${v}/demos/${d}/pasos`,
+  limites: (v) => `/vehiculos/${v}/limites`,
+  adminDemoPasos: (v, d) => `/admin/unidades/${v}/demos/${d}/pasos`,
   // Administración (Etapa 3 · app/api/routes/admin.py)
   adminMetricas: () => "/admin/metricas",
   adminModelos: () => "/admin/modelos",

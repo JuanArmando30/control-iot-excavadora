@@ -56,3 +56,33 @@ export const auth = {
 
   misVehiculos: () => http.get(R.misVehiculos(), { auth: "sesion" }).then((r) => V.filas(r.data)),
 };
+
+/* ---------------- Comprador: su unidad (Etapa 6) ---------------- */
+const S = { auth: "sesion" };
+const id = (n) => {
+  if (!Number.isInteger(n) || n <= 0) throw new TypeError("Identificador inválido");
+  return n;
+};
+const get = (ruta) => http.get(ruta, S).then((r) => r.data);
+const post = (ruta, cuerpo) => http.post(ruta, cuerpo, S).then((r) => r.data);
+
+export const mio = {
+  /* Lecturas de SU unidad, siempre con su token (funcionan también con LECTURA_ABIERTA=false) */
+  comandos: (v) => get(R.comandos(id(v))).then(V.comandos),
+  limites: (v) => get(R.limites(id(v))).then(V.fila),
+  ejecucion: (v) => get(R.demoEjecucion(id(v))).then(V.demoEjecucion),
+  /* DEMO: de fábrica (solo lectura) y propias */
+  demos: (v) => get(R.misDemos(id(v))).then(V.filas),
+  demo: (v, d) => get(R.miDemo(id(v), id(d))).then(V.fila),
+  crearDemo: (v, cuerpo) => post(R.misDemos(id(v)), cuerpo).then(V.fila),
+  actualizarDemo: (v, d, cuerpo) => post(R.miDemoActualizar(id(v), id(d)), cuerpo).then(V.fila),
+  eliminarDemo: (v, d) => post(R.miDemoEliminar(id(v), id(d))),
+  guardarPasos: (v, d, pasos) => post(R.miDemoPasos(id(v), id(d)), { pasos }).then(V.fila),
+  /* Ejecución con SU token (autorización por unidad en el servidor) */
+  iniciarDemo: (v, d) => post(R.demoIniciar(id(v), id(d))).then(V.demoIniciada),
+  cancelarDemo: (v) => post(R.demoCancelar(id(v))).then(V.demoCancelada),
+  /* Soporte: consentimiento temporal para que la empresa opere su unidad */
+  soporte: (v) => get(R.miSoporte(id(v))).then(V.filas),
+  otorgarSoporte: (v, cuerpo) => post(R.miSoporte(id(v)), cuerpo).then(V.fila),
+  revocarSoporte: (v) => post(R.miSoporteRevocar(id(v))).then(V.fila),
+};

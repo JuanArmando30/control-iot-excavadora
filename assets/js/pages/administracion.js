@@ -20,8 +20,10 @@ import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { abrirModal, campo, confirmar, leerFormulario } from "../ui/modales.js";
 import { dialogoAcceso, montarAcceso, montarBotonSesion } from "../ui/sesion-ui.js";
 import { $, el, icono, toast } from "../ui/dom.js";
-import { fecha, insigniaEstado } from "../ui/admin-ui.js";
+import { abrirEditorDemo } from "../ui/editor-demo.js";
+import { admin } from "../api/admin-api.js";
 import { iniciarConectividad } from "./comun.js";
+import { crearComprador } from "./admin/comprador.js";
 import { crearPanel } from "./admin/panel.js";
 import { crearInventario } from "./admin/inventario.js";
 import { crearModelos } from "./admin/modelos.js";
@@ -223,6 +225,7 @@ async function cargarMovimientos() {
   const d = demos.find((x) => x.id_demo === demoSel);
   $("tituloMovimientos").textContent = d ? `Movimientos de «${d.nombre}»` : "Movimientos de la DEMO";
   $("btnNuevoMovimiento").disabled = !d;
+  $("btnEditorPasos").disabled = !d;
   if (!d) { filaVacia(tb, 5, "Selecciona una DEMO."); return; }
   let movs;
   try { movs = await api.movimientosDemo(vehiculoSel, d.id_demo); } catch (e) { filaVacia(tb, 5, e.message); return; }
@@ -299,6 +302,27 @@ $("btnNuevoMovimiento").addEventListener("click", async () => {
   formulario("Agregar paso a la DEMO", camposMovimiento(),
     async (d) => { await api.agregarMovimientoDemo(vehiculoSel, demoSel, d); toast("Paso agregado.", "ok"); await cargarMovimientos(); });
 });
+/* Editor de la DEMO de fábrica: reordenar y editar todos los pasos con los límites del modelo (Etapa 6). */
+$("btnEditorPasos").addEventListener("click", async () => {
+  const d = demos.find((x) => x.id_demo === demoSel);
+  if (!d || !requiereClave()) return;
+  let limites;
+  let movimientos;
+  try {
+    if (!comandos.length) await cargarComandos();
+    [limites, movimientos] = await Promise.all([api.limites(vehiculoSel), api.movimientosDemo(vehiculoSel, d.id_demo)]);
+  } catch (e) { toast(e.message, "error"); return; }
+  abrirEditorDemo({
+    titulo: `Pasos de «${d.nombre}» (fábrica)`,
+    comandos, limites, movimientos,
+    nota: "Guardar reemplaza toda la secuencia en una sola operación. Queda en la bitácora.",
+    guardar: async (pasos) => {
+      await admin.guardarPasosFabrica(vehiculoSel, d.id_demo, pasos);
+      toast("Pasos guardados.", "ok");
+      await cargarMovimientos();
+    },
+  });
+});
 
 /* ------------------------ Secciones de la empresa ----------------------- */
 // Si el inventario crea o cambia unidades, el selector del catálogo técnico se recarga al volver.
@@ -339,29 +363,7 @@ $("btnRecargar").addEventListener("click", cargarActiva);
 /* -------------------------------- Vistas -------------------------------- */
 let vistaActual = "";
 
-async function pintarMisVehiculos() {
-  const lista = $("listaMisVehiculos");
-  lista.replaceChildren(el("li", { class: "vacio", text: "Cargando…" }));
-  try {
-    const mias = await auth.misVehiculos();
-    if (!mias.length) {
-      lista.replaceChildren(el("li", { class: "vacio", text: "Todavía no tienes unidades asignadas. La empresa te las asigna al comprarlas." }));
-      return;
-    }
-    lista.replaceChildren(...mias.map((v) => el("li", { class: "mi-vehiculo" }, [
-      el("div", {}, [
-        el("strong", { text: v.nombre }),
-        el("small", { class: "celda-sec", text: `${v.modelo || "Modelo sin nombre"}${v.numero_serie ? ` · Serie ${v.numero_serie}` : ""}` }),
-      ]),
-      el("div", { class: "text-end" }, [
-        insigniaEstado(v.estado_comercial),
-        el("small", { class: "celda-sec", text: `Tuya desde ${fecha(v.asignada_desde)}` }),
-      ]),
-    ])));
-  } catch (e) {
-    lista.replaceChildren(el("li", { class: "aviso aviso-error", text: e.message }));
-  }
-}
+const comprador = crearComprador();
 
 /** Decide qué vista mostrar según la sesión y la clave guardada. */
 async function aplicarVista() {
@@ -384,8 +386,9 @@ async function aplicarVista() {
   $("avisoOperador").hidden = vista !== "operador";
   $("contenido").removeAttribute("aria-busy");
 
+  if (vista !== "comprador") comprador.detener();          // deja de consultar la ejecución
   if (vista === "acceso") { setTimeout(() => $("accesoCorreo")?.focus(), 50); return; }
-  if (vista === "comprador") { await pintarMisVehiculos(); return; }
+  if (vista === "comprador") { await comprador.cargar(); return; }
 
   // Operador: no ve las pestañas de la empresa → empieza en Vehículos.
   const inicial = location.hash === "#demo" ? "tab-demo" : vista === "operador" ? "tab-veh" : "tab-panel";

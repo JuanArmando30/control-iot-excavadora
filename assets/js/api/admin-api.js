@@ -56,6 +56,9 @@ export const admin = {
   asignar: (id_vehiculo, id_usuario) => post(R.adminAsignaciones(), { id_vehiculo, id_usuario }).then(V.fila),
   finalizarAsignacion: (a, c) => post(R.adminAsignacionFinalizar(id(a)), c).then(V.fila),
 
+  /* ---- DEMO de fábrica: editor de pasos (Etapa 6) ---- */
+  guardarPasosFabrica: (v, d, pasos) => post(R.adminDemoPasos(id(v), id(d)), { pasos }).then(V.fila),
+
   /* ---- Bitácora ---- */
   auditoria: (f) => get(conFiltros(R.adminAuditoria(), f)).then(V.pagina),
 };

@@ -1229,3 +1229,45 @@ body {
   .metrica-valor { font-size: 1.35rem; }
 }
 .aviso-operador { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 8px; font-size: .84rem; }
+
+/* ==========================================================================
+   Etapa 6 · Vista del comprador y editor de DEMO
+   ========================================================================== */
+.vista-comprador { overflow: hidden; }
+.panel-mio { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.panel-mio .nav-tabs { flex: none; }
+.panel-mio .tab-content { flex: 1 1 auto; min-height: 0; }
+.vista-comprador > .tarjeta-h .form-select { min-width: 0; max-width: 240px; }
+.aviso-ejecucion {
+  flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+  background: #2a1020; border-color: #a0304e; color: #ffe1e8; margin-bottom: 8px;
+}
+.btn-detener { font-weight: 800; letter-spacing: .05em; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+.chips { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chips li { padding: 4px 10px; border-radius: 999px; background: #0a1434; border: 1px solid #1a2a60; font-size: .8rem; }
+.chips li.vacio { border: 0; background: none; }
+
+/* Editor de pasos */
+.editor-pasos { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 6px; counter-reset: paso; }
+.editor-paso {
+  display: grid; gap: 6px 8px; align-items: end; padding: 8px 10px; border-radius: 12px;
+  background: #0a1434; border: 1px solid #1a2a60;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "num cmd cmd" "num dur pau" "acc acc acc";
+}
+.editor-num { grid-area: num; align-self: center; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font-size: .78rem; font-weight: 700; background: #1b3278; color: #fff; }
+.editor-campo { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin: 0; }
+.editor-campo small { color: var(--tenue); font-size: .7rem; }
+.editor-cmd { grid-area: cmd; }
+.editor-paso > .editor-campo:nth-of-type(2) { grid-area: dur; }
+.editor-paso > .editor-campo:nth-of-type(3) { grid-area: pau; }
+.editor-acc { grid-area: acc; display: flex; gap: 4px; justify-content: flex-end; }
+.editor-acc .btn { min-width: 36px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+.editor-paso .editor-ms { grid-area: dur / dur / pau / pau; color: var(--tenue); font-size: .82rem; }
+@media (min-width: 576px) {
+  .editor-paso { grid-template-columns: 28px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "num cmd dur pau acc"; }
+}
+.editor-pie { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.editor-resumen { margin: 0; font-size: .82rem; color: var(--tenue); font-variant-numeric: tabular-nums; }
+.editor-resumen.mal { color: #ffd0da; }
+.editor-error { font-weight: 600; }

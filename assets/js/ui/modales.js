@@ -9,18 +9,27 @@ let contador = 0;
 /**
  * @param {{titulo:string, cuerpo:Node[], acciones:Array<{texto:string, clase?:string,
  *          tipo?:"submit"|"button", alPulsar?:(ctx)=>Promise<boolean|void>|boolean|void}>,
- *          alAbrir?:(ctx)=>void}} op
+ *          alAbrir?:(ctx)=>void, tamano?:"lg"|"xl"|"fullscreen-sm-down"}} op
  * @returns {{cerrar:()=>void, error:(msg:string)=>void, form:HTMLFormElement}}
  */
-export function abrirModal({ titulo, cuerpo, acciones, alAbrir }) {
+export function abrirModal({ titulo, cuerpo, acciones, alAbrir, tamano = "" }) {
   const id = `modal-${++contador}`;
   const alerta = el("div", { class: "alert alert-danger py-2 small d-none", attrs: { role: "alert" } });
   const form = el("form", { class: "modal-content", attrs: { novalidate: true } });
   const pie = el("div", { class: "modal-footer" });
 
+  // Bootstrap ignora hide() mientras el modal aún se está abriendo (animación de ~300 ms).
+  // Si la operación termina antes (API rápida), el cierre se aplaza hasta «shown»:
+  // si no, el modal quedaría abierto tras guardar y un segundo clic duplicaría la acción.
+  let mostrado = false;
+  let cerrando = false;
   const ctx = {
     form,
-    cerrar: () => instancia.hide(),
+    cerrar: () => {
+      cerrando = true;
+      pie.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+      if (mostrado) instancia.hide();
+    },
     error: (msg) => { alerta.textContent = msg; alerta.classList.toggle("d-none", !msg); },
     ocupado: (on) => pie.querySelectorAll("button").forEach((b) => { b.disabled = on; }),
   };
@@ -47,7 +56,7 @@ export function abrirModal({ titulo, cuerpo, acciones, alAbrir }) {
     } catch (err) {
       ctx.error(err?.message || "Ocurrió un error.");
     } finally {
-      ctx.ocupado(false);
+      if (!cerrando) ctx.ocupado(false);       // si se está cerrando, sigue bloqueado (sin doble envío)
     }
   });
 
@@ -60,11 +69,13 @@ export function abrirModal({ titulo, cuerpo, acciones, alAbrir }) {
     pie,
   );
   const raiz = el("div", { class: "modal fade", attrs: { id, tabindex: "-1", "aria-labelledby": `${id}-t`, "aria-modal": "true", role: "dialog" } },
-    [el("div", { class: "modal-dialog modal-dialog-centered modal-dialog-scrollable" }, [form])]);
+    [el("div", { class: `modal-dialog modal-dialog-centered modal-dialog-scrollable${tamano ? ` modal-${tamano}` : ""}` }, [form])]);
   document.body.append(raiz);
 
   const instancia = new window.bootstrap.Modal(raiz);
   raiz.addEventListener("shown.bs.modal", () => {
+    mostrado = true;
+    if (cerrando) { instancia.hide(); return; }
     (raiz.querySelector("input:not([type=checkbox]),select,textarea") || raiz.querySelector(".btn-close"))?.focus();
     alAbrir?.(ctx);
   });

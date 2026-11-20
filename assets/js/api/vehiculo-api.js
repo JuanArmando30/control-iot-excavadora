@@ -56,6 +56,8 @@ export const api = {
     }
   },
   historial: (v) => datos(http.get(R.historial(id(v)))).then(V.historial),
+  /** Límites de seguridad del modelo de la unidad (V011). */
+  limites: (v) => datos(http.get(R.limites(id(v)))).then(V.fila),
 
   /* ---------- Movimiento individual ---------- */
   moverPorCodigo: (v, codigo, origen) =>
