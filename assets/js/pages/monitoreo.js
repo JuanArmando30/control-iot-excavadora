@@ -53,8 +53,11 @@ async function cargarVehiculo() {
     const partes = [vehiculo.modelo, vehiculo.microcontrolador, `Vehículo #${vehiculo.id_vehiculo}`, vehiculo.activo ? "Activo en la base de datos" : "Inactivo en la base de datos"];
     $("monVehiculoInfo").textContent = partes.filter(Boolean).join(" · ");
   } catch (e) {
-    $("monNombre").textContent = `Vehículo #${V}`;
-    $("monVehiculoInfo").textContent = "No se pudo consultar el nombre: " + e.message;
+    const sinSesion = e.status === 401 && !UNIDAD.usuario;
+    $("monNombre").textContent = sinSesion ? "Inicia sesión para ver tus unidades" : `Vehículo #${V}`;
+    $("monVehiculoInfo").textContent = sinSesion
+      ? "Monitoreo muestra las unidades de tu cuenta. Entra desde Administración o prueba la unidad de exhibición como invitado."
+      : "No se pudo consultar el nombre: " + e.message;
   }
   pintarUltimo();
 }
@@ -330,6 +333,9 @@ $("wsUrl").textContent = CONFIG.wsUrl(V);
 
 (async function iniciar() {
   montarSelectorUnidad(UNIDAD, elegirUnidad);
+  if (!UNIDAD.usuario && !CONFIG.claveApi) {
+    $("monNombre").textContent = "Inicia sesión para ver tus unidades";
+  }
   inicializarClave();
   pintarUltimo();
   pintarTablaMensaje("cargando", "Cargando historial…");

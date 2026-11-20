@@ -375,7 +375,7 @@ async function aplicarVista() {
   else if ((u && u.rol === "admin") || rolClave === "admin") vista = "admin";
   else if (rolClave === "operador") vista = "operador";
 
-  $("btnClave").classList.toggle("d-none", !!u);          // con sesión la clave no hace falta
+  $("btnClave").classList.toggle("d-none", !!u || !CONFIG.claveApi);   // con sesión (o sin clave, Etapa 9) no hace falta
   pintarClave();
   if (vista === vistaActual) return;
   vistaActual = vista;

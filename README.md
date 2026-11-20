@@ -1,14 +1,26 @@
 # Control · Excavadora IoT (frontend para GitHub Pages)
 
-Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, sin compilación) con tres secciones:
+Aplicación web estática (HTML5 + CSS3 + Bootstrap 5 + JavaScript ES modules, sin compilación) para una
+empresa que vende vehículos IoT: **CONTROL | MONITOREO | ADMINISTRACIÓN** y una página pública para invitados.
 
-| Sección | Archivo | Qué hace | ¿Clave? |
+| Sección | Archivo | Qué hace | ¿Quién? |
 |---|---|---|---|
-| **Control** | `index.html` | Una sola pantalla sin scroll con un mando horizontal: control de **conducción** (izquierda), control de **brazo y pala** (derecha), centro con luz, sonido, encendido, **Demo** y DETENER; indicadores WSS · AWS · RDS integrados en el menú superior; 6 modos de manejo (Pulso, Joystick, Voz, Giroscopio, IA con gestos de la mano y Táctil) | Operador |
-| **Monitoreo** | `monitoreo.html` | Nombre del vehículo, indicadores WSS · API AWS · Amazon RDS, tarjeta destacada del **último movimiento reportado** (en vivo por WSS) y tabla de los **últimos 10 movimientos** persistidos; registro técnico de eventos WSS plegado | No (solo lectura) |
-| **Administración / Configuración** | `administracion.html` | Una sola pantalla sin scroll (solo se desplazan las tablas, con encabezado fijo): pestañas Vehículos, Comandos, DEMO (lista y pasos lado a lado en pantallas anchas) y Configuración; indicadores WSS · AWS · RDS en el menú, como en Control (misma conexión WSS compartida) | Operador (eliminar: Admin) |
+| **Control** | `index.html` | Mando horizontal en una pantalla: **conducción**, **brazo y pala**, luz, sonido, encendido, **Demo** y DETENER; 6 modos (Pulso, Joystick, Voz, Giroscopio, IA, Táctil); estado **solicitado → aceptado → reportado por la unidad**; selector de unidad | Comprador (sus unidades) · empresa (inventario; vendida solo con soporte) |
+| **Monitoreo** | `monitoreo.html` | Último movimiento en vivo (WSS) y tabla de los **10 últimos movimientos** persistidos en RDS | Igual que Control |
+| **Administración** | `administracion.html` | Empresa: Panel, Inventario, Modelos, Clientes, Asignaciones, Bitácora, catálogo técnico. Comprador: **Mis vehículos** (DEMO propias con editor, soporte) | Con sesión (correo y contraseña) |
+| **Invitado** | `invitado.html` | Catálogo público y **prueba de 5 min** de la unidad de exhibición cuando la empresa la abre | Cualquiera, sin cuenta |
 
-Backend existente (no se modifica su lógica ni los 21 procedimientos): FastAPI en Amazon EC2 + Amazon RDS MySQL.
+Seguridad (Etapas 4–9): sesión con token de acceso corto en memoria + token de renovación que rota;
+autorización por unidad en REST y WebSocket (ticket de un solo uso); credencial propia del ESP32;
+la clave X‑API‑Key y los accesos abiertos de la transición están **retirados**.
+
+**Documentación de la ampliación** (`docs/administracion/`): [diagnóstico](docs/administracion/01-diagnostico.md) ·
+[modelo de datos y migraciones](docs/administracion/02-modelo-datos.md) · [backend](docs/administracion/03-backend-administracion.md) ·
+[autenticación](docs/administracion/04-autenticacion.md) · [frontend Administración](docs/administracion/05-frontend-administracion.md) ·
+[Mis vehículos y DEMO](docs/administracion/06-mis-vehiculos-y-demos.md) · [invitados](docs/administracion/07-invitados.md) ·
+[tiempo real por unidad](docs/administracion/08-tiempo-real-por-unidad.md) · [pruebas y publicación](docs/administracion/09-pruebas-y-publicacion.md).
+
+Backend: FastAPI en Amazon EC2 + Amazon RDS MySQL (los 21 procedimientos originales se conservan; 13 migraciones versionadas).
 
 | Recurso | URL |
 |---|---|

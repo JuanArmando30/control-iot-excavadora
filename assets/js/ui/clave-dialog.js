@@ -16,6 +16,15 @@ function pintarBoton() {
   const b = $("btnClave");
   if (!b) return;
   const u = sesionStore.usuario();
+  if (!u && !CONFIG.claveApi) {
+    // Etapa 9: sin clave; el botón lleva a iniciar sesión.
+    b.querySelector("span").textContent = "Entrar";
+    b.classList.remove("btn-outline-warning", "btn-outline-info", "btn-outline-success");
+    b.classList.add("btn-outline-light");
+    b.title = "Inicia sesión para controlar y monitorear tus unidades.";
+    b.setAttribute("aria-label", "Iniciar sesión");
+    return;
+  }
   if (u && !b.closest(".pagina-admin")) {
     // Etapa 8: con sesión, Control y Monitoreo usan el token (el servidor decide por unidad).
     b.querySelector("span").textContent = u.nombre.split(" ")[0];
@@ -37,7 +46,28 @@ function pintarBoton() {
     : tiene ? `Clave de ${ROLES[rol] || "operador"} guardada. Cambiar clave` : "Escribir clave de operador");
 }
 
+/** Sin clave (Etapa 9): explica cómo seguir — iniciar sesión o probar como invitado. */
+function abrirAvisoSesion(motivo = "") {
+  // Una sola vez a la vista (Control lo abre al cargar si no hay sesión; «Entrar» no debe duplicarlo).
+  if (document.querySelector(".modal.aviso-sesion")) return;
+  const ctx = abrirModal({
+    titulo: "Inicia sesión",
+    cuerpo: [
+      el("p", { text: motivo || "Para controlar o monitorear una unidad necesitas iniciar sesión con tu cuenta." }),
+      el("p", { class: "small text-secondary-emphasis mb-0", text:
+        "Si compraste una unidad, entra con la cuenta que te dio la empresa. Si solo quieres conocerla, pruébala unos minutos como invitado." }),
+    ],
+    acciones: [
+      { texto: "Probar como invitado", clase: "btn-outline-info me-auto", alPulsar: () => { location.href = "invitado.html"; } },
+      { texto: "Cerrar", clase: "btn-outline-secondary" },
+      { texto: "Iniciar sesión", clase: "btn-primary", alPulsar: () => { location.href = "administracion.html"; } },
+    ],
+  });
+  ctx.form.closest(".modal").classList.add("aviso-sesion");
+}
+
 export function abrirDialogoClave({ motivo = "" } = {}) {
+  if (!CONFIG.claveApi) { abrirAvisoSesion(""); return; }
   const recordar = claveStore.recordada();
   abrirModal({
     titulo: "Clave de acceso",
@@ -71,14 +101,22 @@ export function abrirDialogoClave({ motivo = "" } = {}) {
 
 /** Revalida la clave guardada al cargar la página. Si la API responde 401, se descarta. */
 export async function inicializarClave() {
+  if (!CONFIG.claveApi && claveStore.obtener()) {
+    claveStore.olvidar();          // la clave se retiró: no se vuelve a enviar (el servidor la rechazaría)
+  }
   pintarBoton();
   claveStore.alCambiar(pintarBoton);
   sesionStore.alCambiar(pintarBoton);
   $("btnClave")?.addEventListener("click", () => {
-    if (sesionStore.usuario() && !$("btnClave").closest(".pagina-admin")) { location.href = "administracion.html"; return; }
+    if ((sesionStore.usuario() || !CONFIG.claveApi) && !$("btnClave").closest(".pagina-admin")) {
+      if (sesionStore.usuario()) { location.href = "administracion.html"; return; }
+      abrirAvisoSesion("");
+      return;
+    }
     abrirDialogoClave();
   });
   const clave = claveStore.obtener();
+  if (!CONFIG.claveApi) { if (CONFIG.controlAbierto) await comprobarControlAbierto(); return; }
   if (!clave) { await comprobarControlAbierto(); return; }
   try {
     const { rol } = await api.sesion();

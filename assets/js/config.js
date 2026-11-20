@@ -198,7 +198,15 @@ export const CONFIG = Object.freeze({
    * No hay ninguna clave en este archivo: se abre o se cierra desde el `.env`
    * del servidor. Con `false` la página siempre pide la clave.
    */
-  controlAbierto: true,
+  controlAbierto: false,
+
+  /**
+   * Etapa 9: la clave X-API-Key se RETIRÓ (el backend la rechaza con
+   * CLAVE_API_HABILITADA=false). En false la página no la pide ni la envía y
+   * borra la que hubiera quedado recordada. Volver a true solo junto con el
+   * servidor (vuelta atrás).
+   */
+  claveApi: false,
 
   /** El backend identifica el paro por nombre (comando_service.buscar_detener). */
   nombreDetener: "DETENER",

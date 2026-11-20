@@ -2,6 +2,7 @@
  * Interfaz de la sesión: tarjeta de inicio de sesión, restablecer con el
  * código del administrador, cambiar contraseña y botón de usuario.
  */
+import { CONFIG } from "../config.js";
 import { auth } from "../api/auth-api.js";
 import { sesionStore } from "../core/sesion-store.js";
 import { abrirDialogoClave } from "./clave-dialog.js";
@@ -69,8 +70,8 @@ export function montarAcceso(destino) {
       el("div", { class: "acceso-enlaces" }, [
         el("button", { class: "btn btn-link btn-sm", text: "Tengo un código del administrador",
           attrs: { type: "button" }, on: { click: () => dialogoRestablecer(correo.value.trim()) } }),
-        el("button", { class: "btn btn-link btn-sm", text: "Usar la clave X-API-Key (transición)",
-          attrs: { type: "button" }, on: { click: () => abrirDialogoClave({ motivo: "Mientras dura la transición, la clave de administrador también abre Administración." }) } }),
+        CONFIG.claveApi ? el("button", { class: "btn btn-link btn-sm", text: "Usar la clave X-API-Key (transición)",
+          attrs: { type: "button" }, on: { click: () => abrirDialogoClave({ motivo: "Mientras dura la transición, la clave de administrador también abre Administración." }) } }) : null,
         el("a", { class: "btn btn-sm btn-outline-info mt-2", text: "¿Solo quieres conocerla? Pruébala como invitado",
           attrs: { href: "invitado.html" } }),
       ]),
