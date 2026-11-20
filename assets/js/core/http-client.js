@@ -128,7 +128,7 @@ export class HttpClient {
     }
   }
 
-  async enviar(ruta, { method = "GET", body, auth = false, clave: claveExplicita, signal, timeoutMs, permitirClave = false } = {}, usaToken = {}) {
+  async enviar(ruta, { method = "GET", body, auth = false, clave: claveExplicita, signal, timeoutMs, permitirClave = false, invitado } = {}, usaToken = {}) {
     if (!METODOS.has(method)) throw new ApiError("Método HTTP no permitido.", { tipo: "CLIENTE" });
     if (typeof ruta !== "string" || !ruta.startsWith("/")) {
       throw new ApiError("Ruta de API inválida.", { tipo: "CLIENTE" });
@@ -139,6 +139,8 @@ export class HttpClient {
 
     const headers = { Accept: "application/json" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
+    // Invitado (Etapa 7): token de la reserva, solo en memoria, en su propia cabecera.
+    if (invitado) headers["X-Invitado"] = invitado;
     if (auth === "sesion") {
       const token = await this.tokenVigente();
       const clave = permitirClave ? this.obtenerClave() : "";

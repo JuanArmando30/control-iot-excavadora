@@ -58,6 +58,14 @@ const RUTAS = Object.freeze({
   miDemoPasos: (v, d) => `/mis-vehiculos/${v}/demos/${d}/pasos`,
   limites: (v) => `/vehiculos/${v}/limites`,
   adminDemoPasos: (v, d) => `/admin/unidades/${v}/demos/${d}/pasos`,
+  // Invitados (Etapa 7 · app/api/routes/invitado.py)
+  invCatalogo: () => "/invitado/catalogo",
+  invReservar: () => "/invitado/reservar",
+  invEstado: () => "/invitado/estado",
+  invLatido: () => "/invitado/latido",
+  invTerminar: () => "/invitado/terminar",
+  adminExhibicion: (v) => `/admin/unidades/${v}/exhibicion`,
+  adminExhibicionTerminar: (v) => `/admin/unidades/${v}/exhibicion/terminar`,
   // Administración (Etapa 3 · app/api/routes/admin.py)
   adminMetricas: () => "/admin/metricas",
   adminModelos: () => "/admin/modelos",
@@ -106,6 +114,9 @@ export const CONFIG = Object.freeze({
     historialRetrasoMs: 600,
     /** Se renueva el token de acceso este tiempo ANTES de que caduque (dura 10 min). */
     renovarAntesMs: 60000,
+    /** Invitado: cada cuánto se avisa «sigo aquí» (el servidor detiene la unidad a los 15 s sin señal). */
+    latidoInvitadoMs: 5000,
+    catalogoInvitadoMs: 10000,
   }),
 
   /** Tamaño de página de las tablas de Administración (el backend admite 1–200). */

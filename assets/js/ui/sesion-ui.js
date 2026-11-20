@@ -71,6 +71,8 @@ export function montarAcceso(destino) {
           attrs: { type: "button" }, on: { click: () => dialogoRestablecer(correo.value.trim()) } }),
         el("button", { class: "btn btn-link btn-sm", text: "Usar la clave X-API-Key (transición)",
           attrs: { type: "button" }, on: { click: () => abrirDialogoClave({ motivo: "Mientras dura la transición, la clave de administrador también abre Administración." }) } }),
+        el("a", { class: "btn btn-sm btn-outline-info mt-2", text: "¿Solo quieres conocerla? Pruébala como invitado",
+          attrs: { href: "invitado.html" } }),
       ]),
     ]),
   );

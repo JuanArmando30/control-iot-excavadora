@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'; connect-src https://vehiculos-juan.duckdns.org wss://vehiculos-juan.duckdns.org; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Conoce la excavadora IoT y pruébala unos minutos como invitado, sin crear una cuenta.">
+  <meta name="theme-color" content="#060d24">
+  <title>Prueba como invitado · Excavadora IoT</title>
+  <link rel="icon" href="assets/icons/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="assets/icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="assets/site.webmanifest">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script type="module" src="assets/js/pages/invitado.js"></script>
+</head>
+<body class="pagina-invitado">
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <header class="barra-sup">
+    <div class="container-xl barra-sup-in">
+      <a class="marca" href="index.html">
+        <img src="assets/icons/icon-192.png" alt="" width="40" height="40">
+        <span class="marca-txt"><strong>Excavadora IoT</strong><small>Prueba como invitado</small></span>
+      </a>
+      <div class="menu">
+      <nav class="nav-sec" aria-label="Secciones">
+        <a href="index.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gamepad"/></svg><span>Control</span></a>
+        <a href="monitoreo.html"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-pulse"/></svg><span>Monitoreo</span></a>
+        <a href="administracion.html" aria-label="Administración"><svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-gear"/></svg><span class="lbl-largo">Administración</span><span class="lbl-corto" aria-hidden="true">Admin</span></a>
+      </nav>
+      <div id="panelConectividad" class="estado-barra"></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="contenido" class="container-xl contenido">
+    <h1 class="titulo-pagina">Prueba la excavadora</h1>
+
+    <!-- ===================== Catálogo público ===================== -->
+    <section id="vistaCatalogo" aria-labelledby="tCatalogo">
+      <p class="aviso">Sin crear cuenta puedes manejar la unidad de exhibición durante <strong>5 minutos</strong>,
+        cuando la empresa la tiene abierta a visitantes (hay alguien supervisándola). Solo se usan los movimientos
+        permitidos a invitados y <strong>DETENER</strong> funciona siempre.</p>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 id="tCatalogo" class="subtitulo m-0">Unidades en exhibición</h2>
+        <button id="btnActualizar" class="btn btn-sm btn-outline-light" type="button" aria-label="Actualizar el catálogo">
+          <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-sync"/></svg>
+        </button>
+      </div>
+      <div id="gridCatalogo" class="catalogo" aria-live="polite" aria-busy="true"></div>
+    </section>
+
+    <!-- ===================== Prueba en curso ===================== -->
+    <section id="vistaPrueba" class="prueba" aria-labelledby="tPrueba" hidden>
+      <div class="tarjeta prueba-cab">
+        <div>
+          <h2 id="tPrueba" class="m-0">Unidad</h2>
+          <p id="pruebaModelo" class="ayuda m-0"></p>
+        </div>
+        <div class="reloj" role="timer" aria-live="off">
+          <span id="reloj" class="reloj-txt">5:00</span>
+          <span class="reloj-barra" aria-hidden="true"><span id="relojBarra"></span></span>
+          <small>tiempo restante</small>
+        </div>
+        <button id="btnTerminar" class="btn btn-outline-light" type="button">Terminar</button>
+      </div>
+
+      <p class="aviso aviso-guardia">Mantén esta pestaña abierta y visible: si la cierras o pierdes conexión,
+        la excavadora se detiene sola en unos segundos.</p>
+
+      <button id="btnDetener" class="btn btn-danger btn-detener w-100" type="button">
+        <svg class="ico" aria-hidden="true"><use href="assets/icons/sprite.svg#i-stop"/></svg> DETENER
+      </button>
+      <p id="estadoDemo" class="aviso aviso-ejecucion mt-2" role="status" aria-live="polite" hidden></p>
+
+      <div class="prueba-cuerpo">
+        <section class="tarjeta" aria-labelledby="tMandos">
+          <h3 id="tMandos" class="subtitulo mt-0">Movimientos</h3>
+          <div id="gridMandos" class="mandos-invitado"></div>
+          <p class="ayuda">Cada toque envía un movimiento (el vehículo se detiene solo a los ~3 s).</p>
+        </section>
+        <section class="tarjeta" aria-labelledby="tDemos">
+          <h3 id="tDemos" class="subtitulo mt-0">DEMO</h3>
+          <ul id="listaDemos" class="lista-demos-inv"></ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <div class="container-xl">
+      <p class="mb-0">Desarrollado por <strong>Juan Armando Castillo Rodríguez</strong> · 2026</p>
+    </div>
+  </footer>
+</body>
+</html>

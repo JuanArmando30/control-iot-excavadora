@@ -1271,3 +1271,39 @@ body {
 .editor-resumen { margin: 0; font-size: .82rem; color: var(--tenue); font-variant-numeric: tabular-nums; }
 .editor-resumen.mal { color: #ffd0da; }
 .editor-error { font-weight: 600; }
+
+/* ==========================================================================
+   Etapa 7 · Invitado: catálogo público y prueba temporal
+   ========================================================================== */
+.catalogo { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.unidad-cat { display: flex; flex-direction: column; gap: 6px; }
+.unidad-cat-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.unidad-cat-cab h3 { font-size: 1.05rem; margin: 0; }
+.unidad-cat-modelo { margin: 0; color: var(--acento); font-size: .88rem; }
+.unidad-cat .ayuda { margin: 0; }
+.unidad-cat-pie { margin-top: auto; padding-top: 8px; }
+.prueba { display: grid; gap: 10px; }
+.prueba-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.prueba-cab h2 { font-size: 1.1rem; color: var(--texto); text-transform: none; letter-spacing: 0; }
+.reloj { display: flex; flex-direction: column; align-items: center; min-width: 120px; }
+.reloj-txt { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--acento); line-height: 1; }
+.reloj-txt.poco { color: var(--medio); }
+.reloj-barra { width: 100%; height: 6px; border-radius: 6px; background: #0a1434; overflow: hidden; margin: 4px 0 2px; }
+.reloj-barra span { display: block; height: 100%; background: linear-gradient(90deg, var(--acento), var(--violeta)); transition: width .5s linear; }
+.reloj small { color: var(--tenue); font-size: .7rem; }
+.aviso-guardia { margin: 0; font-size: .84rem; }
+.pagina-invitado .btn-detener { min-height: 64px; font-size: 1.25rem; justify-content: center; }
+.prueba-cuerpo { display: grid; gap: 10px; }
+@media (min-width: 768px) { .prueba-cuerpo { grid-template-columns: 2fr 1fr; } }
+.mandos-invitado { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.btn-mando-inv {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 84px;
+  border-radius: 16px; border: 1px solid var(--panel-borde); background: linear-gradient(180deg, #16295f, #0e1c48);
+  color: var(--texto); font-weight: 700; font-size: .85rem; touch-action: manipulation;
+}
+.btn-mando-inv .ico { width: 26px; height: 26px; }
+.btn-mando-inv:hover { border-color: var(--acento); }
+.btn-mando-inv:active { transform: scale(.97); background: #1d3a85; }
+.btn-mando-inv:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.lista-demos-inv { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.lista-demos-inv li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: #0a1434; }

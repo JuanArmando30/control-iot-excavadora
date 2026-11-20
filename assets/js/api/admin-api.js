@@ -59,6 +59,11 @@ export const admin = {
   /* ---- DEMO de fábrica: editor de pasos (Etapa 6) ---- */
   guardarPasosFabrica: (v, d, pasos) => post(R.adminDemoPasos(id(v), id(d)), { pasos }).then(V.fila),
 
+  /* ---- Exhibición para invitados (Etapa 7) ---- */
+  exhibicion: (v) => get(R.adminExhibicion(id(v))).then(V.fila),
+  cambiarExhibicion: (v, abierta, horas = 2) => post(R.adminExhibicion(id(v)), { abierta, horas }).then(V.fila),
+  terminarReserva: (v) => post(R.adminExhibicionTerminar(id(v))).then(V.fila),
+
   /* ---- Bitácora ---- */
   auditoria: (f) => get(conFiltros(R.adminAuditoria(), f)).then(V.pagina),
 };

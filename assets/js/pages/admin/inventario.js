@@ -5,8 +5,8 @@
  */
 import { CONFIG } from "../../config.js";
 import { admin } from "../../api/admin-api.js";
-import { confirmar } from "../../ui/modales.js";
-import { $, el, toast } from "../../ui/dom.js";
+import { abrirModal, confirmar } from "../../ui/modales.js";
+import { $, el, fechaHora, toast } from "../../ui/dom.js";
 import {
   boton, fecha, filaCargando, filaVacia, formulario, insigniaEstado, NOMBRE_ESTADO, pintarPaginador, retrasar,
 } from "../../ui/admin-ui.js";
@@ -69,6 +69,9 @@ export function crearInventario({ alCambiar }) {
       acciones.push(boton("Liberar", "i-x", "btn-outline-warning", () => liberar(u), `Finalizar la asignación de ${u.nombre}`));
     } else if (u.activo && ["inventario", "exhibicion"].includes(u.estado_comercial)) {
       acciones.push(boton("Asignar", "i-link", "btn-outline-success", () => asignar(u), `Asignar ${u.nombre} a un cliente`));
+    }
+    if (u.estado_comercial === "exhibicion" && u.activo) {
+      acciones.push(boton("Invitados", "i-user", "btn-outline-warning", () => exhibicion(u), `Exhibición para invitados de ${u.nombre}`));
     }
     if (!["vendida", "baja"].includes(u.estado_comercial)) {
       acciones.push(boton("Baja", "i-trash", "btn-outline-danger", () => baja(u), `Dar de baja ${u.nombre}`));
@@ -155,6 +158,46 @@ export function crearInventario({ alCambiar }) {
       await cargar();
       alCambiar();
     }, { textoGuardar: "Finalizar asignación", nota: `Propietario actual: ${u.propietario || "—"}. Su historial se conserva.` });
+  }
+
+  /** Interruptor de exhibición: los invitados solo reservan cuando la empresa lo abre (Etapa 7). */
+  async function exhibicion(u) {
+    let e;
+    try { e = await admin.exhibicion(u.id_vehiculo); } catch (err) { toast(err.message, "error"); return; }
+    const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    const estado = e.abierta
+      ? `Abierta a invitados hasta ${fechaHora(e.abierta_hasta)}.`
+      : "Cerrada: los invitados ven la unidad en el catálogo pero no pueden reservarla.";
+    const reserva = e.reserva
+      ? `Hay un visitante usándola (quedan ${mmss(e.reserva.segundos_restantes)}).`
+      : "Nadie la está usando ahora.";
+    const horas = el("select", { class: "form-select form-select-sm w-auto", attrs: { "aria-label": "Horas abierta" } },
+      [1, 2, 4, 8].map((h) => el("option", { text: `${h} h`, attrs: { value: h, selected: h === 2 } })));
+    const intentar = async (accion, mensaje) => {
+      try { await accion(); toast(mensaje, "ok"); } catch (err) { toast(err.message, "error"); }
+    };
+    const acciones = [{ texto: "Cerrar", clase: "btn-outline-secondary" }];
+    if (e.reserva) {
+      acciones.unshift({ texto: "Terminar reserva (DETENER)", clase: "btn-outline-danger me-auto",
+        alPulsar: () => intentar(() => admin.terminarReserva(u.id_vehiculo), "Reserva terminada y unidad detenida.") });
+    }
+    acciones.push(e.abierta
+      ? { texto: "Cerrar exhibición", clase: "btn-warning",
+        alPulsar: () => intentar(() => admin.cambiarExhibicion(u.id_vehiculo, false), "Exhibición cerrada.") }
+      : { texto: "Abrir a invitados", clase: "btn-primary",
+        alPulsar: () => intentar(() => admin.cambiarExhibicion(u.id_vehiculo, true, Number.parseInt(horas.value, 10)), "Exhibición abierta.") });
+    abrirModal({
+      titulo: `Invitados · ${u.nombre}`,
+      cuerpo: [
+        el("p", { class: "aviso mb-2", text: estado }),
+        el("p", { class: "small", text: reserva }),
+        e.abierta ? null : el("div", { class: "d-flex align-items-center gap-2 mb-2" }, [el("label", { class: "small", text: "Abrir durante" }), horas]),
+        el("p", { class: "alert alert-warning py-2 small mb-0", text:
+          "Ábrela solo con alguien junto a la máquina. Cada visitante la usa 5 minutos con los comandos permitidos a invitados; "
+          + "se cierra sola al pasar el tiempo o si se reinicia la API." }),
+      ].filter(Boolean),
+      acciones,
+    });
   }
 
   async function baja(u) {
