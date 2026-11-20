@@ -24,7 +24,7 @@ export class ConectividadService extends EventTarget {
     this.comprobando = false;
     this.timer = null;
     this.estado = {
-      ws: { nivel: NIVEL.MAL, texto: "Desconectado", detalle: "Sin abrir" },
+      ws: { nivel: NIVEL.NEUTRO, texto: "Preparando", detalle: "Aún sin abrir" },
       api: { nivel: NIVEL.MEDIO, texto: "Comprobando", detalle: "Primera verificación" },
       rds: { nivel: NIVEL.NEUTRO, texto: "Sin verificar", detalle: "Esperando a la API" },
     };
@@ -46,6 +46,11 @@ export class ConectividadService extends EventTarget {
     if (estado === WS.ABIERTO) this._set("ws", NIVEL.OK, "En línea", detalle);
     else if (estado === WS.CONECTANDO) this._set("ws", NIVEL.MEDIO, "Conectando", detalle);
     else if (estado === WS.RECONECTANDO || estado === WS.ESPERANDO) this._set("ws", NIVEL.MEDIO, "Reconectando", detalle);   // reintento programado
+    else if (estado === WS.SIN_PERMISO) {
+      // No es una falla de la red ni del servidor: falta la sesión, la reserva o el permiso.
+      const t = /sesión/i.test(detalle) ? "Sin sesión" : /reserv/i.test(detalle) ? "Sin reserva" : "Sin permiso";
+      this._set("ws", NIVEL.NEUTRO, t, detalle);
+    }
     else this._set("ws", NIVEL.MAL, "Desconectado", detalle);
   }
 

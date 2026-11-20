@@ -106,7 +106,34 @@ anterior hasta recargarla.
    instrucciones que imprime (nueva cuenta solo con `EXECUTE` en `DB_USER`, la maestra en `DB_MIGRA_USER`) y reinicia.
 7. Opcional: quitar `API_KEY_OPERADOR` y `API_KEY_ADMIN` del `.env` (ya no se usan).
 
-## 7. Criterios de aceptación
+## 7. Corrección posterior: WSS «Desconectado» y reserva del invitado (V014)
+
+Síntomas reportados tras publicar: el indicador WSS en rojo aunque AWS y RDS estaban bien, y el invitado
+veía su propia reserva como «ocupada» y no podía volver a entrar.
+
+| Causa | Corrección |
+|---|---|
+| Sin sesión (o sin reserva) la página igual intentaba abrir el WSS; el servidor lo rechazaba (401) y se pintaba **rojo** | Estado nuevo `SIN_PERMISO`: no se pide ticket ni se abre el WebSocket; el indicador queda **gris** («Sin sesión», «Sin reserva» o «Sin permiso»). Rojo solo es una falla real de red o servidor |
+| Administración abría el WSS **antes** del inicio de sesión y nunca lo rehacía (había que recargar); además siempre iba a la unidad #1 (403 para un comprador) | Canal reconfigurable (`CanalWs` en `comun.js`): al iniciar sesión se conecta a la unidad de la persona (`resolverUnidad`), al cerrarla se suelta; Control y Monitoreo lo sueltan si la sesión termina |
+| El invitado conectaba el WSS sin reserva y siempre a la unidad de `config.js` | El WSS se abre **solo al reservar**, a la unidad reservada, con identidad propia de la reserva; al terminar vuelve a gris |
+| El token del invitado vivía solo en memoria: **recargar** lo perdía y la unidad quedaba «ocupada» por uno mismo | El token se guarda en el `sessionStorage` de **esa pestaña** (nunca `localStorage`); al recargar se **retoma** la reserva |
+| Tras perderla, la espera de 10 min castigaba al visitante aunque la reserva terminara por desconexión | **V014** (`sp_invitado_reservar`): la espera solo cuenta reservas `cancelada`/`expirada` (las que el visitante usó o cerró); tras `desconexion`, `detenida` o `admin` puede reservar enseguida. Si la misma red ya tiene la reserva responde `propia` → «Ya tienes una reserva activa…» en lugar de «ocupada». El límite por hora sigue contando todas |
+
+Pruebas: `pytest` **80** (nueva `test_reserva_propia_y_sin_espera_tras_desconexion`), `probar_v014` para la
+copia de RDS, y en el navegador (modo producción) **25/25**: sin sesión/sin reserva gris y sin tickets; invitado
+reserva → WSS en línea a su unidad; recarga → retoma; otra pestaña → «Ya tienes una reserva»; cerrar la pestaña →
+se libera en ~11 s y se reserva de nuevo sin espera; terminar a propósito → sí hay espera; Administración conecta
+al iniciar sesión y suelta al salir sin recargar; comprador → su unidad. Regresión Etapa 8 y anónimo: sin cambios.
+
+Publicación de la corrección:
+1. Commit y push de backend y frontend.
+2. Servidor: `actualizar_servidor.ps1` (sin `-Transicion`; ya está cerrada).
+3. `python -m app.db.migrar probar` (debe pasar V014 en la copia).
+4. Instantánea de RDS `antes-v014-AAAAMMDD` y esperar a que esté **Disponible**.
+5. `python -m app.db.migrar aplicar --respaldo` y reiniciar la tarea de la API.
+   Sin V014 aplicada la página ya funciona (WSS y retomar la reserva); V014 solo añade «propia» y quita la espera tras una desconexión.
+
+## 8. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.
 - [x] Regresión de Control y Monitoreo (con y sin sesión).

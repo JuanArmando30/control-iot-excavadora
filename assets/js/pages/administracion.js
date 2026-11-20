@@ -23,7 +23,7 @@ import { $, el, icono, toast } from "../ui/dom.js";
 import { abrirEditorDemo } from "../ui/editor-demo.js";
 import { admin } from "../api/admin-api.js";
 import { iniciarConectividad } from "./comun.js";
-import { identidadWs } from "../core/unidad-activa.js";
+import { identidadWs, resolverUnidad } from "../core/unidad-activa.js";
 import { crearComprador } from "./admin/comprador.js";
 import { crearPanel } from "./admin/panel.js";
 import { crearInventario } from "./admin/inventario.js";
@@ -400,14 +400,45 @@ async function aplicarVista() {
 
 /* Indicadores WSS · AWS · RDS en el menú (igual que Control), con la conexión WSS compartida. */
 
+/**
+ * Destino del WSS según quién está en la pestaña: con sesión, su unidad (la del
+ * comprador o la elegida por la empresa); con clave (transición), la de config.js;
+ * sin nada, ninguno (indicador gris «Sin sesión», no un error).
+ * Se recalcula al iniciar o cerrar sesión, sin recargar la página.
+ */
+async function destinoWs() {
+  if (sesionStore.activa()) {
+    const { id } = await resolverUnidad();
+    return { idVehiculo: id, identidad: identidadWs(), obtenerTicket: () => api.ticketWs(id) };
+  }
+  if (claveStore.obtener()) {
+    return { idVehiculo: CONFIG.vehiculoId, identidad: "clave", obtenerTicket: () => api.ticketWs(CONFIG.vehiculoId) };
+  }
+  return null;
+}
+
+let canalWs = null;
+let secuenciaWs = 0;
+let quienWs = null;            // la renovación periódica del token también avisa: solo cuenta si cambió quién es
+async function actualizarCanalWs() {
+  if (!canalWs) return;
+  const quien = `${identidadWs()}|${claveStore.obtener() ? "clave" : ""}`;
+  if (quien === quienWs) return;
+  quienWs = quien;
+  const n = ++secuenciaWs;
+  let destino = null;
+  try { destino = await destinoWs(); } catch { /* sin unidades: queda sin destino */ }
+  if (n === secuenciaWs) canalWs.cambiar(destino);      // solo la respuesta más reciente
+}
+
 (async function iniciar() {
   montarAcceso($("vistaAcceso"));
   montarBotonSesion($("btnSesion"));
   $("btnAvisoEntrar").addEventListener("click", dialogoAcceso);
-  sesionStore.alCambiar(() => { aplicarVista(); });
-  claveStore.alCambiar(() => { aplicarVista(); });
+  sesionStore.alCambiar(() => { aplicarVista(); actualizarCanalWs(); });
+  claveStore.alCambiar(() => { aplicarVista(); actualizarCanalWs(); });
+  canalWs = iniciarConectividad({ barra: true, idVehiculo: null }).ws;
   await Promise.all([auth.recuperar(), inicializarClave()]);
-  // Indicadores WSS · AWS · RDS con la identidad ya conocida (ticket de la sesión o de la clave).
-  iniciarConectividad({ barra: true, identidad: identidadWs() }).ws.conectar();
-  await aplicarVista();
+  canalWs.conectar();
+  await Promise.all([actualizarCanalWs(), aplicarVista()]);
 })();

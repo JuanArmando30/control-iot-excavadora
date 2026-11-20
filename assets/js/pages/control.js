@@ -28,7 +28,7 @@ import { $, el, toast, vibrar, avisoEstado } from "../ui/dom.js";
 import { abrirModal } from "../ui/modales.js";
 import { mio } from "../api/auth-api.js";
 import { elegirUnidad, identidadWs, resolverUnidad } from "../core/unidad-activa.js";
-import { iniciarConectividad, montarSelectorUnidad, pintarVehiculo } from "./comun.js";
+import { iniciarConectividad, montarSelectorUnidad, soltarAlCerrarSesion, pintarVehiculo } from "./comun.js";
 
 /* Etapa 8: la unidad sale de la sesión (dueño: las suyas; empresa: su inventario;
    sin sesión: la de exhibición). Con sesión, el servidor autoriza por unidad. */
@@ -60,6 +60,7 @@ const comandos = new ComandoService({
   api, vehiculoId: V, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa, wsActivo: () => wsAbierto,
 });
 const { ws } = iniciarConectividad({ barra: true, idVehiculo: V, identidad: identidadWs() });
+soltarAlCerrarSesion(ws);
 /** Una sola línea de retroalimentación (sustituye a la lista de mensajes). */
 const log = (etq, txt) => {
   const p = $("lineaEstado");

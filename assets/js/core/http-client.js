@@ -139,7 +139,7 @@ export class HttpClient {
 
     const headers = { Accept: "application/json" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
-    // Invitado (Etapa 7): token de la reserva, solo en memoria, en su propia cabecera.
+    // Invitado (Etapa 7): token de la reserva (solo de esta pestaña), en su propia cabecera.
     if (invitado) headers["X-Invitado"] = invitado;
     // Lecturas sin credencial explícita: si hay sesión se identifica (con LECTURA_ABIERTA=false el
     // servidor lo exige; con true no cambia nada). Nunca para el invitado ni el inicio de sesión.

@@ -5,7 +5,10 @@
  *   exhibición y nadie más la tiene.
  * - Prueba: reloj, DETENER (siempre), movimientos permitidos a invitados y DEMO
  *   de fábrica aptas. Latido cada 5 s: si deja de llegar, el servidor detiene la
- *   unidad y libera la reserva. El token vive solo en memoria.
+ *   unidad y libera la reserva. El token vive en la pestaña (memoria y
+ *   sessionStorage): al recargar se retoma la reserva en lugar de perderla.
+ * - WSS: solo durante la reserva y solo a la unidad reservada (antes no hay
+ *   permiso: el indicador queda en gris «Sin reserva», no en rojo).
  */
 import { CONFIG } from "../config.js";
 import { invitado } from "../api/invitado-api.js";
@@ -92,7 +95,7 @@ function confirmarReserva(u) {
 
 /* ------------------------------ Prueba ------------------------------ */
 
-function entrarPrueba(r, u) {
+function entrarPrueba(r, u, { retomada = false } = {}) {
   reserva = r;
   unidad = u;
   total = Math.max(r.segundos_restantes, 1);
@@ -109,8 +112,12 @@ function entrarPrueba(r, u) {
   pintarReloj();
   tReloj = setInterval(pintarReloj, 500);
   tLatido = setInterval(latir, T.latidoInvitadoMs);
+  // Eventos en vivo de SU unidad, con un ticket de su reserva (identidad propia de la reserva).
+  ws.cambiar({ idVehiculo: u.id_vehiculo, identidad: `invitado-${r.id_reserva}`,
+    obtenerTicket: () => invitado.ticketWs(u.id_vehiculo) });
+  if (retomada) latir();
   $("btnDetener").focus();
-  toast("¡Listo! La unidad es tuya unos minutos.", "ok");
+  toast(retomada ? "Retomaste tu reserva." : "¡Listo! La unidad es tuya unos minutos.", "ok");
 }
 
 function pintarMandos() {
@@ -207,6 +214,7 @@ function salir(mensaje) {
   reserva = null;
   enDemo = false;
   invitado.olvidar();
+  ws.cambiar(null, SIN_RESERVA);
   $("vistaPrueba").hidden = true;
   $("vistaCatalogo").hidden = false;
   toast(mensaje, "info");
@@ -228,10 +236,21 @@ document.addEventListener("keydown", (e) => {
 });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && reserva) latir(); });
 
-const { ws } = iniciarConectividad({
-  barra: true, identidad: "invitado",
-  obtenerTicket: () => invitado.ticketWs(unidad?.id_vehiculo ?? CONFIG.vehiculoId),
-});
+const SIN_RESERVA = "Sin reserva: los eventos en vivo empiezan al reservar una unidad";
+const { ws } = iniciarConectividad({ barra: true, idVehiculo: null, textoSinDestino: SIN_RESERVA });
 ws.conectar();
-cargarCatalogo();
-tCatalogo = setInterval(cargarCatalogo, T.catalogoInvitadoMs);
+
+/** ¿Había una reserva en esta pestaña (recargó la página)? Se retoma; si no, catálogo. */
+async function arrancar() {
+  const previa = await invitado.recuperar();
+  if (previa) {
+    let u = null;
+    try { u = (await invitado.catalogo()).find((x) => x.id_vehiculo === previa.id_vehiculo) || null; } catch { /* sin catálogo */ }
+    entrarPrueba(previa, u || { id_vehiculo: previa.id_vehiculo, nombre: `Unidad #${previa.id_vehiculo}`, modelo: "", es_simulada: false },
+      { retomada: true });
+    return;
+  }
+  cargarCatalogo();
+  tCatalogo = setInterval(cargarCatalogo, T.catalogoInvitadoMs);
+}
+arrancar();

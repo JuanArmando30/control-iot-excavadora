@@ -13,18 +13,22 @@ export const WS = Object.freeze({
   RECONECTANDO: "reconectando",
   ESPERANDO: "esperando",        // cerrado, con reintento programado
   CERRADO: "cerrado",            // cerrado sin reintento (4404, cierre manual)
+  SIN_PERMISO: "sin_permiso",    // sin sesión / sin reserva / sin permiso para la unidad: no es una falla
 });
 
 const CIERRE_NO_ENCONTRADO = 4404;
 const CIERRE_PROHIBIDO = 4403;        // sin permiso para la unidad (o permiso revocado): no se reintenta
 const CIERRE_SIN_PONG = 4000;
+const CIERRE_SIN_TICKET = 4401;       // ticket ausente, vencido o ya usado
+const MAX_4401_SEGUIDOS = 2;          // tras dos seguidos se deja de insistir (no hay permiso)
 
 export class WsClient extends EventTarget {
   /**
    * @param {{url: string, idVehiculo: number, pingMs: number, pongMaxMs: number,
    *          baseMs: number, maxMs: number, obtenerTicket?: () => Promise<string|null>}} op
    *   obtenerTicket (Etapa 8): pide un ticket de un solo uso antes de CADA conexión
-   *   (POST /ws/ticket). null = conectar sin ticket (transición WS_ABIERTO).
+   *   (POST /ws/ticket). null = conectar sin ticket (transición WS_ABIERTO);
+   *   false = no hay con qué pedirlo (sin sesión ni reserva): no se conecta.
    */
   constructor({ url, idVehiculo, pingMs, pongMaxMs, baseMs, maxMs, obtenerTicket = null }) {
     super();
@@ -40,6 +44,7 @@ export class WsClient extends EventTarget {
     this.manual = false;
     this.timers = { reconexion: null, ping: null, pong: null };
     this.proximoIntento = null;
+    this.rechazos = 0;             // cierres 4401 seguidos
 
     window.addEventListener("online", () => this._reconectarYa("La red volvió"));
     window.addEventListener("offline", () => this.ws?.close(CIERRE_SIN_PONG, "offline"));
@@ -72,12 +77,20 @@ export class WsClient extends EventTarget {
       this._estado(estadoInicial, "Pidiendo permiso para la unidad…");
       try {
         const ticket = await this.obtenerTicket();
+        if (generacion !== this.generacion || this.manual) return;
+        if (ticket === false) {
+          this._estado(WS.SIN_PERMISO, "Inicia sesión (o reserva como invitado) para recibir los eventos en vivo");
+          return;
+        }
         if (ticket) url = `${this.url}?ticket=${encodeURIComponent(ticket)}`;
       } catch (e) {
         if (generacion !== this.generacion || this.manual) return;
-        if (e?.status === 401 || e?.status === 403) {
-          this._estado(WS.CERRADO, e.status === 403 ? "Sin permiso para esta unidad" : "Inicia sesión para recibir eventos");
+        if (e?.status === 401 || e?.status === 403 || e?.tipo === "SIN_CLAVE" || e?.tipo === "SIN_SESION") {
+          this._estado(WS.SIN_PERMISO, e.status === 403 ? "Sin permiso para esta unidad" : "Inicia sesión para recibir los eventos en vivo");
           return;
+        }
+        if (e?.status === 429) {          // demasiados tickets seguidos: se espera más
+          this.intentos = Math.max(this.intentos, 3);
         }
         this._reintentar(`Sin ticket (${e?.message || "red"})`);
         return;
@@ -98,6 +111,7 @@ export class WsClient extends EventTarget {
     ws.onopen = () => {
       if (ws !== this.ws) return;
       this.intentos = 0;
+      this.rechazos = 0;
       this._estado(WS.ABIERTO, "Suscrito al vehículo " + this.idVehiculo);
       this.timers.ping = setInterval(() => this._ping(), this.pingMs);
     };
@@ -124,9 +138,14 @@ export class WsClient extends EventTarget {
         return;
       }
       if (ev.code === CIERRE_PROHIBIDO) {
-        this._estado(WS.CERRADO, "Sin permiso para esta unidad (4403)");
+        this._estado(WS.SIN_PERMISO, ev.reason ? `${ev.reason} (4403)` : "Sin permiso para esta unidad (4403)");
         return;
       }
+      if (ev.code === CIERRE_SIN_TICKET && ++this.rechazos >= MAX_4401_SEGUIDOS) {
+        this._estado(WS.SIN_PERMISO, "El servidor pide iniciar sesión para los eventos en vivo (4401)");
+        return;
+      }
+      if (ev.code !== CIERRE_SIN_TICKET) this.rechazos = 0;
       this._reintentar(`Código ${ev.code || "—"}`);
     };
   }

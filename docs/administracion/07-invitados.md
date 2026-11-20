@@ -28,7 +28,7 @@ Pendiente en el servidor: `probar` V012, snapshot, `aplicar`.
 | Abuso | 3 reservas por hora y 10 min entre reservas por red (hash de la IP), contados en RDS; además límite en memoria |
 | Interruptor | La empresa decide cuándo hay supervisión; caduca solo; al cerrarlo termina la reserva |
 | Reinicio de la API | Al arrancar se cierran todas las reservas abiertas (`detenida`) y la exhibición queda cerrada |
-| Token | Aleatorio, solo en memoria del navegador; en la base solo su HMAC; cabecera `X-Invitado` |
+| Token | Aleatorio, en memoria y en el `sessionStorage` de la pestaña (para retomar la reserva al recargar; nunca `localStorage`); en la base solo su HMAC; cabecera `X-Invitado` |
 | Trazabilidad | El historial guarda la sesión del invitado como autor; auditoría `invitado.reservar`, `invitado.fin`, `exhibicion.abrir/cerrar`, `invitado.terminar` |
 
 ## 3. Backend
@@ -58,7 +58,7 @@ Servicio: `app/services/invitado_service.py` (reserva, vigilante, exclusividad, 
 | Archivo | Qué es |
 |---|---|
 | `invitado.html` + `assets/js/pages/invitado.js` | **Nuevo** · catálogo, condiciones, prueba (reloj, DETENER, mandos, DEMO), latido |
-| `assets/js/api/invitado-api.js` | **Nuevo** · token solo en memoria |
+| `assets/js/api/invitado-api.js` | **Nuevo** · token de la pestaña (memoria + sessionStorage) |
 | `assets/js/pages/admin/inventario.js` | Acción *Invitados*: abrir/cerrar exhibición y terminar la reserva |
 | `assets/js/ui/sesion-ui.js` | Enlace «Pruébala como invitado» |
 | `assets/js/core/http-client.js`, `config.js`, `assets/css/app.css` | Cabecera `X-Invitado`, rutas, estilos |

@@ -62,12 +62,14 @@ export const api = {
    * WS_ABIERTO=true (y entonces la conexión sin ticket también vale).
    */
   ticketWs: async (v, { invitado } = {}) => {
+    // Sin sesión, ni clave, ni reserva no hay ticket posible: no se molesta al servidor.
+    if (!invitado && !claveStore.obtener() && !sesionStore.activa() && !sesionStore.recuperable() && !CONFIG.claveApi) return false;
     const op = invitado ? { invitado } : { auth: claveStore.obtener() || sesionStore.activa() ? true : false };
     try {
       const r = await http.post(R.wsTicket(), { id_vehiculo: id(v) }, op);
       return typeof r.data?.ticket === "string" ? r.data.ticket : null;
     } catch (e) {
-      if (e.tipo === "SIN_CLAVE") return null;
+      if (e.tipo === "SIN_CLAVE") return CONFIG.claveApi ? null : false;
       throw e;
     }
   },

@@ -20,7 +20,7 @@ import { UltimoMovimiento, HistorialReciente, FUENTE } from "../domain/monitoreo
 import { inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, hora, icono } from "../ui/dom.js";
 import { elegirUnidad, identidadWs, resolverUnidad } from "../core/unidad-activa.js";
-import { iniciarConectividad, montarSelectorUnidad, textoEvento } from "./comun.js";
+import { iniciarConectividad, montarSelectorUnidad, soltarAlCerrarSesion, textoEvento } from "./comun.js";
 
 /* Etapa 8: unidad de la sesión (o la de exhibición sin sesión). */
 const UNIDAD = await resolverUnidad();
@@ -38,6 +38,7 @@ const horaDe = (ms) => (ms == null ? "—" : FMT_HORA.format(ms));
 const etiqueta = (nombre) => (nombre ? Catalogo.etiqueta({ nombre }) : "Comando sin nombre");
 
 const { ws } = iniciarConectividad({ idVehiculo: V, identidad: identidadWs() });
+soltarAlCerrarSesion(ws);
 const demo = new DemoService({ api, vehiculoId: V });
 const ultimo = new UltimoMovimiento();
 const historial = new HistorialReciente(10);

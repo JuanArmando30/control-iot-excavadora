@@ -28,6 +28,7 @@ export const auth = {
   /** Recupera la sesión al cargar la página (si la pestaña tenía una). */
   async recuperar() {
     if (!sesionStore.recuperable()) return null;
+    if (sesionStore.activa() && sesionStore.token()) return sesionStore.usuario();   // ya está vigente
     try { await sesionStore.renovar(); } catch { /* sin sesión o sin red */ }
     return sesionStore.usuario();
   },
