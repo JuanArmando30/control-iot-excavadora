@@ -5,6 +5,7 @@
  */
 import { CONFIG } from "../../config.js";
 import { admin } from "../../api/admin-api.js";
+import { api } from "../../api/vehiculo-api.js";
 import { abrirModal, confirmar } from "../../ui/modales.js";
 import { $, el, fechaHora, toast } from "../../ui/dom.js";
 import {
@@ -63,8 +64,58 @@ export function crearInventario({ alCambiar }) {
     tb.replaceChildren(...p.elementos.map(fila));
   }
 
+  /**
+   * Movimientos de la unidad: su catálogo (lo que puede hacer, copiado de su modelo)
+   * y su historial reciente en RDS. En una unidad VENDIDA el catálogo se ve siempre
+   * (ficha del producto), pero el historial y el control piden el soporte del cliente.
+   */
+  async function movimientos(u) {
+    const [c, h] = await Promise.allSettled([api.comandos(u.id_vehiculo), api.historial(u.id_vehiculo)]);
+    const tabla = (cabeceras, filas, vacio) => el("div", { class: "table-responsive", attrs: { tabindex: "0", role: "region", "aria-label": cabeceras.titulo } }, [
+      el("table", { class: "table table-sm tabla-admin mb-0" }, [
+        el("thead", {}, [el("tr", {}, cabeceras.columnas.map((t) => el("th", { attrs: { scope: "col" }, text: t })))]),
+        el("tbody", {}, filas.length ? filas
+          : [el("tr", {}, [el("td", { class: "vacio", text: vacio, attrs: { colspan: cabeceras.columnas.length } })])]),
+      ]),
+    ]);
+    const catalogo = c.status === "fulfilled"
+      ? tabla({ titulo: "Catálogo de la unidad", columnas: ["Código", "Comando", "Estado"] },
+        c.value.slice().sort((a, b) => a.codigo - b.codigo).map((x) => el("tr", { class: x.activo ? "" : "inactiva" }, [
+          el("td", { text: x.codigo }),
+          el("td", {}, [el("strong", { text: x.nombre }), x.descripcion ? el("div", { class: "small text-secondary-emphasis", text: x.descripcion }) : null]),
+          el("td", {}, [el("span", { class: `badge ${x.activo ? "text-bg-success" : "text-bg-secondary"}`, text: x.activo ? "Activo" : "Inactivo" })]),
+        ])), "La unidad no tiene comandos: revisa las capacidades de su modelo.")
+      : el("p", { class: "aviso aviso-error", text: c.reason.message });
+    const historial = h.status === "fulfilled"
+      ? tabla({ titulo: "Historial reciente", columnas: ["Fecha", "Comando", "Origen"] },
+        h.value.movimientos.map((m) => el("tr", {}, [
+          el("td", { class: "text-nowrap", text: m.fecha_hora ? fechaHora(m.fecha_hora) : "—" }),
+          el("td", { text: m.comando ? `${m.comando} (#${m.codigo})` : "—" }),
+          el("td", { class: "small", text: m.origen }),
+        ])), "Sin movimientos registrados todavía.")
+      : el("p", { class: "aviso", text: h.reason.status === 403
+        ? "Historial reservado: la unidad pertenece a un cliente. Se ve con su autorización de soporte vigente."
+        : h.reason.message });
+    abrirModal({
+      titulo: `Movimientos · ${u.nombre}`,
+      tamano: "lg modal-fullscreen-sm-down",
+      cuerpo: [
+        el("p", { class: "small text-secondary-emphasis", text:
+          "El catálogo viene del modelo al registrar la unidad (pestaña Modelos › Capacidades). El historial son las órdenes reales guardadas en RDS (las más recientes)." }),
+        el("h3", { class: "subtitulo", text: "Catálogo de la unidad" }),
+        catalogo,
+        el("h3", { class: "subtitulo mt-3", text: "Historial reciente" }),
+        historial,
+      ],
+      acciones: [{ texto: "Cerrar", clase: "btn-outline-secondary" }],
+    });
+  }
+
   function fila(u) {
     const acciones = [boton("Editar", "i-edit", "btn-outline-info", () => editar(u), `Editar ${u.nombre}`)];
+    if (u.estado_comercial !== "baja") {
+      acciones.push(boton("Movimientos", "i-list", "btn-outline-light", () => movimientos(u), `Movimientos de ${u.nombre}`));
+    }
     if (u.estado_comercial === "vendida" && u.id_asignacion) {
       acciones.push(boton("Liberar", "i-x", "btn-outline-warning", () => liberar(u), `Finalizar la asignación de ${u.nombre}`));
     } else if (u.activo && ["inventario", "exhibicion"].includes(u.estado_comercial)) {

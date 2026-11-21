@@ -34,9 +34,11 @@ export class ComandoService extends EventTarget {
    * @param {{api: object, vehiculoId: number, obtenerCatalogo: () => import("./catalogo.js").Catalogo,
    *          demoActiva: () => boolean, wsActivo?: () => boolean}} op
    */
-  constructor({ api, vehiculoId, obtenerCatalogo, demoActiva, wsActivo = () => false }) {
+  /** `puedeControlar`: quién decide si hay permiso (sesión/clave; o la reserva del invitado). */
+  constructor({ api, vehiculoId, obtenerCatalogo, demoActiva, wsActivo = () => false,
+    puedeControlar = () => claveStore.puedeControlar() }) {
     super();
-    Object.assign(this, { api, vehiculoId, obtenerCatalogo, demoActiva, wsActivo });
+    Object.assign(this, { api, vehiculoId, obtenerCatalogo, demoActiva, wsActivo, puedeControlar });
     this.ultimoServidor = null;   // último código difundido por el servidor (WSS), en su orden real
     this.verificacion = null;     // temporizador de la comprobación de un paro con orden tardía
     this.generacion = 0;
@@ -52,7 +54,7 @@ export class ComandoService extends EventTarget {
     if (!cat.cargado) return "El catálogo de comandos aún no se ha cargado.";
     if (!Number.isInteger(codigo) || !cat.esActivo(codigo)) return "Ese comando no está disponible en el catálogo del vehículo.";
     if (this.demoActiva()) return "Hay una DEMO en ejecución. Usa DETENER para cancelarla.";
-    if (!claveStore.puedeControlar()) return "Falta la clave de operador (Ajustes).";
+    if (!this.puedeControlar()) return "Inicia sesión (o reserva como invitado) para controlar.";
     return null;
   }
 

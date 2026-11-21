@@ -45,9 +45,10 @@
 
     <!-- ===================== Catálogo público ===================== -->
     <section id="vistaCatalogo" aria-labelledby="tCatalogo">
-      <p class="aviso">Sin crear cuenta puedes manejar la unidad de exhibición durante <strong>5 minutos</strong>,
-        cuando la empresa la tiene abierta a visitantes (hay alguien supervisándola). Solo se usan los movimientos
-        permitidos a invitados y <strong>DETENER</strong> funciona siempre.</p>
+      <p class="aviso">Sin crear cuenta puedes manejar la unidad de exhibición durante <strong>1 minuto</strong>,
+        cuando la empresa la tiene abierta a visitantes (hay alguien supervisándola), con todos los modos de control
+        (Pulso, Joystick, Voz, Giroscopio, IA y Táctil). Solo se usan los movimientos permitidos a invitados y
+        <strong>DETENER</strong> funciona siempre.</p>
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h2 id="tCatalogo" class="subtitulo m-0">Unidades en exhibición</h2>
         <button id="btnActualizar" class="btn btn-sm btn-outline-light" type="button" aria-label="Actualizar el catálogo">
@@ -65,10 +66,11 @@
           <p id="pruebaModelo" class="ayuda m-0"></p>
         </div>
         <div class="reloj" role="timer" aria-live="off">
-          <span id="reloj" class="reloj-txt">5:00</span>
+          <span id="reloj" class="reloj-txt">1:00</span>
           <span class="reloj-barra" aria-hidden="true"><span id="relojBarra"></span></span>
           <small>tiempo restante</small>
         </div>
+        <a id="btnModos" class="btn btn-primary" href="index.html?invitado">Todos los modos</a>
         <button id="btnTerminar" class="btn btn-outline-light" type="button">Terminar</button>
       </div>
 

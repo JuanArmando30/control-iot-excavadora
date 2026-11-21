@@ -78,7 +78,8 @@ function confirmarReserva(u) {
         el("li", { text: "Es una máquina real: hay una persona de la empresa supervisándola." }),
         el("li", { text: "DETENER la para al instante. Úsalo ante cualquier duda." }),
         el("li", { text: "Si cierras la pestaña o pierdes conexión, se detiene sola." }),
-        el("li", { text: "Después podrás volver a probarla pasados unos minutos." }),
+        el("li", { text: "Se abre el control completo: Pulso, Joystick, Voz, Giroscopio, IA y Táctil." }),
+        el("li", { text: "Si la terminas tú, podrás volver a probarla pasados unos minutos." }),
       ]),
       campo({ nombre: "acepto", etiqueta: "Entiendo y quiero probarla", tipo: "checkbox" }),
     ],
@@ -86,8 +87,9 @@ function confirmarReserva(u) {
       { texto: "Cancelar", clase: "btn-outline-secondary" },
       { texto: "Empezar", clase: "btn-primary", tipo: "submit", alPulsar: async ({ form }) => {
         if (!form.elements.acepto.checked) throw new Error("Confirma que entiendes las condiciones.");
-        const r = await invitado.reservar(u.id_vehiculo);
-        entrarPrueba(r, u);
+        await invitado.reservar(u.id_vehiculo);
+        // Control completo con la reserva de esta pestaña (el token sigue en su sessionStorage).
+        location.href = "index.html?invitado";
       } },
     ],
   });
@@ -117,7 +119,7 @@ function entrarPrueba(r, u, { retomada = false } = {}) {
     obtenerTicket: () => invitado.ticketWs(u.id_vehiculo) });
   if (retomada) latir();
   $("btnDetener").focus();
-  toast(retomada ? "Retomaste tu reserva." : "¡Listo! La unidad es tuya unos minutos.", "ok");
+  toast(retomada ? "Retomaste tu reserva." : "¡Listo! La unidad es tuya por un minuto.", "ok");
 }
 
 function pintarMandos() {

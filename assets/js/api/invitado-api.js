@@ -78,9 +78,10 @@ export const invitado = {
   },
 
   /* Control de la unidad reservada (rutas de siempre, con la cabecera X-Invitado) */
-  mover: (v, codigo) => http.post(R.movimientos(id(v)), { codigo, origen: "WEB_INVITADO" }, conToken())
+  /** `origen`: el modo con que se envió (Pulso, Joystick, Voz…) o WEB_INVITADO en la vista sencilla. */
+  mover: (v, codigo, origen = "WEB_INVITADO") => http.post(R.movimientos(id(v)), { codigo, origen }, conToken())
     .then((r) => V.movimientoRegistrado(r.data)),
   iniciarDemo: (v, d) => http.post(R.demoIniciar(id(v), id(d)), undefined, conToken()).then((r) => V.demoIniciada(r.data)),
   cancelarDemo: (v) => http.post(R.demoCancelar(id(v)), undefined, conToken()).then((r) => V.demoCancelada(r.data)),
-  ejecucion: (v) => http.get(R.demoEjecucion(id(v))).then((r) => V.demoEjecucion(r.data)),
+  ejecucion: (v) => http.get(R.demoEjecucion(id(v)), conToken()).then((r) => V.demoEjecucion(r.data)),
 };

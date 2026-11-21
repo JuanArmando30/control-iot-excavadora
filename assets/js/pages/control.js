@@ -6,6 +6,10 @@
  * de conectividad, todo en una sola pantalla.
  * El seguimiento (último movimiento e historial) está en Monitoreo. La DEMO se elige e inicia aquí y se
  * vigila para bloquear el mando mientras corre y para que DETENER la cancele.
+ *
+ * Modo INVITADO (`index.html?invitado`): con la reserva de esta pestaña, los
+ * mismos seis modos sobre la unidad reservada, solo con los comandos y DEMO
+ * permitidos a invitados; reloj de la reserva y latido en la barra superior.
  */
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
@@ -27,15 +31,39 @@ import { abrirDialogoClave, inicializarClave } from "../ui/clave-dialog.js";
 import { $, el, toast, vibrar, avisoEstado } from "../ui/dom.js";
 import { abrirModal } from "../ui/modales.js";
 import { mio } from "../api/auth-api.js";
+import { invitado } from "../api/invitado-api.js";
 import { elegirUnidad, identidadWs, resolverUnidad } from "../core/unidad-activa.js";
 import { iniciarConectividad, montarSelectorUnidad, soltarAlCerrarSesion, pintarVehiculo } from "./comun.js";
 
 /* Etapa 8: la unidad sale de la sesión (dueño: las suyas; empresa: su inventario;
    sin sesión: la de exhibición). Con sesión, el servidor autoriza por unidad. */
-const UNIDAD = await resolverUnidad();
+const MODO_INVITADO = new URLSearchParams(location.search).has("invitado");
+const RESERVA = MODO_INVITADO ? await invitado.recuperar() : null;
+if (MODO_INVITADO && !RESERVA) {                // sin reserva vigente en esta pestaña: al catálogo
+  location.replace("invitado.html");
+  await new Promise(() => {});
+}
+const UNIDAD = RESERVA
+  ? { usuario: null, opciones: [{ id: RESERVA.id_vehiculo, nombre: "" }], id: RESERVA.id_vehiculo, aviso: "" }
+  : await resolverUnidad();
 const V = UNIDAD.id;
 const ES_DUENO = UNIDAD.usuario?.rol === "usuario" && UNIDAD.opciones.some((o) => o.id === V && o.nombre);
 const O = CONFIG.origen;
+/* Invitado: mismas operaciones que `api`, con el token de la reserva (solo su unidad). */
+const API = RESERVA ? {
+  comandos: async () => (await invitado.estado()).comandos.map((c) => ({ ...c, descripcion: null, activo: true })),
+  moverPorCodigo: (v, codigo, origen) => invitado.mover(v, codigo, origen),
+  demos: async () => (await invitado.estado()).demos.map((d) => ({ ...d, activo: true })),
+  ejecucionDemo: (v) => invitado.ejecucion(v),
+  iniciarDemo: (v, d) => invitado.iniciarDemo(v, d),
+  cancelarDemo: (v) => invitado.cancelarDemo(v),
+  movimientosDemo: async () => [],
+} : api;
+let reservaViva = !!RESERVA;
+/** ¿Puede enviar órdenes? Sesión/clave, o el invitado mientras dure su reserva. */
+const puedeControlar = () => (RESERVA ? reservaViva : claveStore.puedeControlar());
+/** Sin permiso: al invitado se le explica que terminó; a los demás, iniciar sesión. */
+const pedirAcceso = (op) => (RESERVA ? terminarInvitado("Tu reserva terminó.") : abrirDialogoClave(op));
 const MODOS = ["pulso", "joystick", "voz", "giro", "ia", "tactil"];
 const AYUDA = {
   pulso: "Pulso: cada toque envía una orden. Izquierda: conducción · derecha: brazo y pala.",
@@ -55,12 +83,16 @@ let modo = leerModo();
 /** Dirección sostenida (Joystick o Giroscopio). Solo un mando a la vez (una orden en vuelo). */
 const mantener = { mando: null, dir: null, timer: null, origen: O.joystick };
 
-const demo = new DemoService({ api, vehiculoId: V, listar: ES_DUENO ? () => mio.demos(V) : null });
+const demo = new DemoService({ api: API, vehiculoId: V, listar: ES_DUENO ? () => mio.demos(V) : null });
 const comandos = new ComandoService({
-  api, vehiculoId: V, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa, wsActivo: () => wsAbierto,
+  api: API, vehiculoId: V, puedeControlar, obtenerCatalogo: () => catalogo, demoActiva: () => demo.activa, wsActivo: () => wsAbierto,
 });
-const { ws } = iniciarConectividad({ barra: true, idVehiculo: V, identidad: identidadWs() });
-soltarAlCerrarSesion(ws);
+const { ws } = iniciarConectividad({
+  barra: true, idVehiculo: V,
+  identidad: RESERVA ? `invitado-${RESERVA.id_reserva}` : identidadWs(),
+  obtenerTicket: RESERVA ? () => invitado.ticketWs(V) : undefined,
+});
+if (!RESERVA) soltarAlCerrarSesion(ws);
 /** Una sola línea de retroalimentación (sustituye a la lista de mensajes). */
 const log = (etq, txt) => {
   const p = $("lineaEstado");
@@ -162,7 +194,7 @@ function soltarMantenido() {
 
 /* ------------------------- Envío de comandos ------------------------ */
 function puedeMover() {
-  return catalogo.cargado && !!claveStore.puedeControlar() && !demo.activa && wsAbierto;
+  return catalogo.cargado && !!puedeControlar() && !demo.activa && wsAbierto;
 }
 
 async function enviar(codigo, origen) {
@@ -190,7 +222,7 @@ async function detenerTodo(origen = O.boton) {
   giroscopio.pausar("Pausado por DETENER. Toca «Activar» para seguir.");
   tactil.cancelar();
   if (gestos.activo) { gestos.bloquear(); $("iaEstado").textContent = "DETENER: abre la mano ✋ para volver a empezar."; }
-  if (!claveStore.puedeControlar()) { abrirDialogoClave({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
+  if (!puedeControlar()) { pedirAcceso({ motivo: "Escribe la clave para poder enviar DETENER." }); return; }
   if (demo.activa) {
     try {
       await demo.cancelar();
@@ -359,7 +391,7 @@ async function ejecutarSecuencia(pasos, plan, nota) {
 }
 
 $("btnMic").addEventListener("click", () => {
-  if (!claveStore.puedeControlar()) { abrirDialogoClave(); return; }
+  if (!puedeControlar()) { pedirAcceso(); return; }
   voz.alternar();
 });
 $("chkManosLibres").addEventListener("change", (e) => { voz.manosLibres = e.target.checked; });
@@ -393,7 +425,7 @@ async function cargarDemos() {
 
 function pintarBotonDemo() {
   const e = demo.estado;
-  const tieneClave = !!claveStore.puedeControlar();
+  const tieneClave = !!puedeControlar();
   btnDemo.classList.toggle("is-demo", e.activa);
   btnDemo.style.setProperty("--avance", e.activa && e.total ? `${Math.round((e.orden / e.total) * 100)}%` : "0%");
   btnDemo.querySelector("use").setAttribute("href", `assets/icons/sprite.svg#${e.activa ? "i-stop" : "i-play"}`);
@@ -432,13 +464,13 @@ async function iniciarDemoElegida(d) {
 function abrirPanelDemo() {
   const demos = demo.demos;
   const elegida = demoElegida();
-  const crear = { texto: demos.length ? "Crear o editar" : "Crear DEMO", clase: "btn-outline-light me-auto",
+  const crear = RESERVA ? null : { texto: demos.length ? "Crear o editar" : "Crear DEMO", clase: "btn-outline-light me-auto",
     alPulsar: () => { location.href = ES_DUENO ? "administracion.html" : "administracion.html#demo"; } };
   if (!demos.length) {
     abrirModal({
       titulo: "DEMO",
       cuerpo: [el("p", { class: "mb-0", text: "No hay DEMO activas para este vehículo. Créalas (y agrega sus pasos) en Administración." })],
-      acciones: [crear, { texto: "Cerrar", clase: "btn-outline-secondary" }],
+      acciones: [crear, { texto: "Cerrar", clase: "btn-outline-secondary" }].filter(Boolean),
     });
     return;
   }
@@ -462,7 +494,7 @@ function abrirPanelDemo() {
       el("div", { class: "demo-lista", attrs: { role: "radiogroup", "aria-label": "DEMO disponibles" } }, opciones),
     ],
     acciones: [
-      crear,
+      ...(crear ? [crear] : []),
       { texto: "Cancelar", clase: "btn-outline-secondary" },
       {
         texto: "Iniciar DEMO", clase: "btn-primary", tipo: "submit",
@@ -484,7 +516,7 @@ function abrirPanelDemo() {
           else n.textContent = `${d.pasos} paso${d.pasos === 1 ? "" : "s"} · ~${seg.toFixed(seg < 10 ? 1 : 0)} s${d.ambito === "privada" ? " · propia" : ""}`;
           continue;
         }
-        api.movimientosDemo(V, d.id_demo).then((m) => {
+        API.movimientosDemo(V, d.id_demo).then((m) => {
           const seg = m.reduce((t, x) => t + x.duracion_ms + x.pausa_ms, 0) / 1000;
           const n = pasos.get(d.id_demo);
           if (!m.length) {
@@ -499,7 +531,7 @@ function abrirPanelDemo() {
 
 btnDemo.addEventListener("click", async () => {
   if (demo.activa) { await detenerTodo(O.boton); return; }
-  if (!claveStore.puedeControlar()) { abrirDialogoClave({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
+  if (!puedeControlar()) { pedirAcceso({ motivo: "Iniciar una DEMO requiere la clave de operador." }); return; }
   abrirPanelDemo();
 });
 demoPreferida.alCambiar(V, pintarBotonDemo);
@@ -590,17 +622,18 @@ ws.addEventListener("mensaje", (e) => {
 /* ---------------------------- Controles ----------------------------- */
 /** 401 de la API: la clave dejó de valer, o el servidor cerró el control abierto. */
 function perderAcceso(motivo) {
+  if (RESERVA) { terminarInvitado("Tu reserva terminó."); return; }
   if (claveStore.esAbierto()) {
     claveStore.fijarAbierto(false);
-    abrirDialogoClave({ motivo: "El servidor ya no permite controlar sin clave. Escribe la clave de operador." });
+    pedirAcceso({ motivo: "El servidor ya no permite controlar sin clave. Escribe la clave de operador." });
     return;
   }
   claveStore.olvidar();
-  abrirDialogoClave({ motivo });
+  pedirAcceso({ motivo });
 }
 
 function motivoBloqueo() {
-  if (!claveStore.puedeControlar()) return "falta la clave de operador.";
+  if (!puedeControlar()) return "falta la clave de operador.";
   if (!catalogo.cargado) return "el catálogo de comandos no se pudo cargar.";
   if (demo.activa) return "hay una DEMO en ejecución.";
   if (!wsAbierto) return "la sesión WSS no está en línea.";
@@ -609,13 +642,13 @@ function motivoBloqueo() {
 
 function explicarBloqueo() {
   const m = motivoBloqueo();
-  if (!claveStore.puedeControlar()) abrirDialogoClave({ motivo: "Escribe la clave de operador para controlar el vehículo." });
+  if (!puedeControlar()) pedirAcceso({ motivo: "Escribe la clave de operador para controlar el vehículo." });
   else if (m) toast("Control bloqueado: " + m, "error");
 }
 
 function actualizarControles() {
   const listo = puedeMover();
-  const tieneClave = !!claveStore.puedeControlar();
+  const tieneClave = !!puedeControlar();
 
   // Si el control se bloquea con una dirección mantenida por teclado, se suelta y se detiene.
   if (!listo && mantener.dir && !algunJoystickActivo()) {
@@ -744,7 +777,7 @@ window.addEventListener("unhandledrejection", (e) => {
 /* ------------------------------ Arranque ---------------------------- */
 async function cargarCatalogo() {
   try {
-    catalogo = new Catalogo(await api.comandos(V));
+    catalogo = new Catalogo(await API.comandos(V));
     if (!catalogo.detener) toast("El catálogo no tiene un comando DETENER activo.", "error");
   } catch (e) {
     catalogo = new Catalogo();
@@ -759,13 +792,81 @@ async function sincronizarDemo() {
   actualizarControles();
 }
 
+/* ------------------------------ Invitado ---------------------------- */
+const tInv = { latido: 0, reloj: 0 };
+let finInvitado = 0;
+
+function mmss(seg) { const x = Math.max(seg, 0); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, "0")}`; }
+
+function pintarRelojInvitado() {
+  const resta = Math.max(Math.round((finInvitado - Date.now()) / 1000), 0);
+  const b = $("btnClave");
+  b.querySelector("span").textContent = `Invitado · ${mmss(resta)}`;
+  b.classList.toggle("btn-outline-danger", resta <= 15);
+  b.setAttribute("aria-label", `Prueba como invitado: quedan ${mmss(resta)}. Pulsa para terminar o volver.`);
+  if (resta <= 0) terminarInvitado("Se acabó tu tiempo. ¡Gracias por probarla!");
+}
+
+async function latirInvitado() {
+  try {
+    const r = await invitado.latido();
+    finInvitado = Date.now() + r.segundos_restantes * 1000;
+  } catch (e) {
+    if (e.status === 401) terminarInvitado("Tu reserva terminó.");
+  }
+}
+
+function terminarInvitado(mensaje) {
+  if (!reservaViva) return;
+  reservaViva = false;
+  clearInterval(tInv.latido);
+  clearInterval(tInv.reloj);
+  invitado.olvidar();
+  ws.cambiar(null, "Sin reserva: los eventos en vivo empiezan al reservar una unidad");
+  actualizarControles();
+  toast(`${mensaje} Volviendo al catálogo…`, "info");
+  setTimeout(() => { location.href = "invitado.html"; }, 2500);
+}
+
+function menuInvitado() {
+  abrirModal({
+    titulo: "Prueba como invitado",
+    cuerpo: [el("p", { class: "mb-0", text: "Puedes volver a la vista sencilla (tu reserva sigue) o terminar la prueba ahora. Al terminar se detiene la unidad." })],
+    acciones: [
+      { texto: "Vista sencilla", clase: "btn-outline-light me-auto", alPulsar: () => { location.href = "invitado.html"; } },
+      { texto: "Seguir", clase: "btn-outline-secondary" },
+      { texto: "Terminar prueba", clase: "btn-danger", alPulsar: async () => {
+        try { await detenerTodo(O.boton); await invitado.terminar(); } catch { /* el servidor la cierra igual */ }
+        terminarInvitado("Reserva terminada.");
+      } },
+    ],
+  });
+}
+
+async function iniciarInvitado() {
+  finInvitado = Date.now() + RESERVA.segundos_restantes * 1000;
+  const b = $("btnClave");
+  b.classList.remove("btn-outline-warning");
+  b.classList.add("btn-outline-info");
+  b.addEventListener("click", menuInvitado);
+  pintarRelojInvitado();
+  tInv.reloj = setInterval(pintarRelojInvitado, 500);
+  tInv.latido = setInterval(latirInvitado, CONFIG.tiempos.latidoInvitadoMs);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && reservaViva) latirInvitado(); });
+  latirInvitado();
+  let nombre = `Unidad #${V}`;
+  try { nombre = (await invitado.catalogo()).find((u) => u.id_vehiculo === V)?.nombre || nombre; } catch { /* */ }
+  $("vehiculoNombre").textContent = `${nombre} · invitado`;
+}
+
 (async function iniciar() {
   setModo(modo);
   botonera.render(catalogo);
-  await inicializarClave();
+  if (RESERVA) await iniciarInvitado();
+  else await inicializarClave();
   montarSelectorUnidad(UNIDAD, elegirUnidad);
   if (UNIDAD.aviso) toast(UNIDAD.aviso, "info");
-  await Promise.all([pintarVehiculo(V), cargarCatalogo(), sincronizarDemo(), cargarDemos()]);
+  await Promise.all([RESERVA ? null : pintarVehiculo(V), cargarCatalogo(), sincronizarDemo(), cargarDemos()]);
   ws.conectar();
-  if (!claveStore.puedeControlar()) abrirDialogoClave({ motivo: "Para mover el vehículo necesitas la clave de operador." });
+  if (!puedeControlar()) pedirAcceso({ motivo: "Para mover el vehículo necesitas la clave de operador." });
 })();

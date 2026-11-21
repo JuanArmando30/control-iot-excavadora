@@ -133,7 +133,23 @@ Publicación de la corrección:
 5. `python -m app.db.migrar aplicar --respaldo` y reiniciar la tarea de la API.
    Sin V014 aplicada la página ya funciona (WSS y retomar la reserva); V014 solo añade «propia» y quita la espera tras una desconexión.
 
-## 8. Criterios de aceptación
+## 8. Ajustes de roles: movimientos en Inventario, invitado con todos los modos y 1 minuto
+
+| Pedido | Cambio |
+|---|---|
+| La empresa debe ver los movimientos de cada unidad | **Inventario › «Movimientos»**: catálogo de la unidad (copiado de su modelo; se edita en Modelos › Capacidades) e historial reciente de RDS con el **origen** (modo) de cada orden. En una unidad **vendida** el catálogo se ve siempre (ficha del producto, `GET /vehiculos/{id}/comandos` abierto a la empresa), pero el historial y el control siguen pidiendo el soporte del cliente (regla de la tarea, sin cambios) |
+| El cliente controla su unidad sin quitarle movimientos y crea sus DEMO | Ya era así: controla desde Control; crear/editar/eliminar comandos responde 403 a su cuenta (nueva prueba); hasta 20 DEMO privadas por unidad |
+| Invitado: todos los modos de control | Al reservar se abre **Control** en modo invitado (`index.html?invitado`): Pulso, Joystick, Voz, Giroscopio, IA y Táctil sobre la unidad reservada, solo con los comandos y DEMO permitidos a invitados; reloj y latido en la barra; «Vista sencilla» o «Terminar prueba» desde el botón del reloj. El historial guarda el modo usado (p. ej. `WEB_PULSO`, `WEB_TECLADO`). El invitado puede consultar si corre una DEMO en **su** unidad (`/demos/ejecucion` con `X-Invitado`); el historial sigue cerrado para él |
+| Reserva de 1 minuto | `MINUTOS_RESERVA=1`, `MAX_RESERVAS_POR_HORA=5`, `ENFRIAMIENTO_MIN=3` (sin migración: son parámetros de `sp_invitado_reservar`) |
+
+Pruebas: `pytest` **82** (nuevas: invitado lee solo la ejecución de su unidad y mueve con cualquier origen; empresa ve el
+catálogo de la vendida pero no su historial ni la mueve; cliente no elimina comandos). Navegador (modo producción)
+**22/22** en el flujo nuevo y regresión sin cambios (WSS 25/25, Etapa 8, anónimo).
+
+Publicación: commit y push de backend y frontend, y en el servidor
+`actualizar_servidor.ps1 -Transicion cerrar` (no hay migraciones nuevas).
+
+## 9. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.
 - [x] Regresión de Control y Monitoreo (con y sin sesión).

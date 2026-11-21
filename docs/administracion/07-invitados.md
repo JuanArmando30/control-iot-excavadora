@@ -9,7 +9,7 @@ Pendiente en el servidor: `probar` V012, snapshot, `aplicar`.
    por 1–8 horas, **solo con alguien junto a la máquina**. Se cierra sola al pasar el tiempo
    o si la API se reinicia (estado seguro).
 2. Cualquier visitante entra a **`invitado.html`** (enlace en la tarjeta de inicio de sesión), ve el
-   **catálogo público** y, si la unidad está disponible, la **reserva 5 minutos** tras aceptar las condiciones.
+   **catálogo público** y, si la unidad está disponible, la **reserva de 1 minuto** tras aceptar las condiciones; al reservar se abre el **control completo** (`index.html?invitado`) con los 6 modos.
 3. Durante la reserva: reloj, **DETENER** grande, solo los **movimientos permitidos a invitados**
    del modelo y las **DEMO de fábrica** cuyos pasos son todos permitidos.
 4. Al **terminar**, **caducar** o **dejar de dar señales 15 s** (pestaña cerrada, sin red), el servidor
@@ -23,9 +23,9 @@ Pendiente en el servidor: `probar` V012, snapshot, `aplicar`.
 | Reserva **exclusiva**, sin fila | Índice único de V005 (`uq_reserva_vigente`); si dos reservan a la vez, la base deja pasar a uno |
 | Nadie más mueve la unidad durante la reserva | Clave, control abierto, admin o dueño → 409. **DETENER y cancelar siempre pasan** |
 | Comandos limitados | `permitido_invitado` del modelo (DETENER siempre). Hoy: movimientos sí; luz, sonido y encendido no |
-| Tiempo limitado | 5 min; vigilante cada segundo; reserva vencida también se cierra en la base |
+| Tiempo limitado | 1 min; vigilante cada segundo; reserva vencida también se cierra en la base |
 | Desconexión | Latido cada 5 s; sin señal 15 s → DETENER y fin (`desconexion`) |
-| Abuso | 3 reservas por hora y 10 min entre reservas por red (hash de la IP), contados en RDS; además límite en memoria |
+| Abuso | 5 reservas por hora y 3 min entre reservas por red (hash de la IP), contados en RDS; la espera no aplica tras una desconexión (V014); además límite en memoria |
 | Interruptor | La empresa decide cuándo hay supervisión; caduca solo; al cerrarlo termina la reserva |
 | Reinicio de la API | Al arrancar se cierran todas las reservas abiertas (`detenida`) y la exhibición queda cerrada |
 | Token | Aleatorio, en memoria y en el `sessionStorage` de la pestaña (para retomar la reserva al recargar; nunca `localStorage`); en la base solo su HMAC; cabecera `X-Invitado` |
