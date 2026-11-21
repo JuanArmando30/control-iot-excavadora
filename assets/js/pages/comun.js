@@ -140,6 +140,7 @@ export function textoEvento(ev) {
     case "demo_cancelada": return `Cancelada · ${d.movimientos_ejecutados ?? "?"} movimientos · ${d.detenido_con || "—"}`;
     case "error": return `${d.codigo_error || "ERROR"} · ${d.detalle || "sin detalle"}`;
     case "pong": return "pong";
+    case "catalogo_actualizado": return d.mensaje || `Catálogo actualizado: ${ev.comando || "—"}`;
     default: return ev.evento;
   }
 }

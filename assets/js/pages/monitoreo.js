@@ -29,7 +29,7 @@ const MAX_EVENTOS = 200;
 const GRUPO = {
   estado_inicial: "estado", estado_actualizado: "estado", movimiento_individual: "movimiento",
   demo_iniciada: "demo", demo_movimiento: "demo", demo_finalizada: "demo", demo_cancelada: "demo",
-  error: "error", pong: "sistema",
+  error: "error", pong: "sistema", catalogo_actualizado: "sistema",
 };
 const FMT_FECHA = new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 const FMT_HORA = new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });

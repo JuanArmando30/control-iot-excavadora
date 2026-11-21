@@ -70,6 +70,7 @@ const RUTAS = Object.freeze({
   wsTicket: () => "/ws/ticket",
   adminDispositivo: (v) => `/admin/unidades/${v}/dispositivo`,
   adminDispositivoRevocar: (v) => `/admin/unidades/${v}/dispositivo/revocar`,
+  adminBloqueoComando: (v, c) => `/admin/unidades/${v}/comandos/${c}/bloqueo`,
   // Administración (Etapa 3 · app/api/routes/admin.py)
   adminMetricas: () => "/admin/metricas",
   adminModelos: () => "/admin/modelos",

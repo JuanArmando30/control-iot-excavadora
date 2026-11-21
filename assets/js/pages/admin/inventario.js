@@ -68,6 +68,7 @@ export function crearInventario({ alCambiar }) {
    * Movimientos de la unidad: su catálogo (lo que puede hacer, copiado de su modelo)
    * y su historial reciente en RDS. En una unidad VENDIDA el catálogo se ve siempre
    * (ficha del producto), pero el historial y el control piden el soporte del cliente.
+   * BLOQUEAR un movimiento sí se puede en cualquier unidad, sin soporte (la empresa es la dueña inicial).
    */
   async function movimientos(u) {
     const [c, h] = await Promise.allSettled([api.comandos(u.id_vehiculo), api.historial(u.id_vehiculo)]);
@@ -78,13 +79,40 @@ export function crearInventario({ alCambiar }) {
           : [el("tr", {}, [el("td", { class: "vacio", text: vacio, attrs: { colspan: cabeceras.columnas.length } })])]),
       ]),
     ]);
+    // La empresa puede BLOQUEAR movimientos de cualquier unidad (también vendida) sin el soporte del cliente.
+    const esDetener = (x) => x.nombre.toUpperCase() === "DETENER";
+    const filaComando = (x) => {
+      const accion = esDetener(x)
+        ? el("span", { class: "small text-secondary-emphasis", text: "Parada de seguridad" })
+        : el("button", {
+          class: `btn btn-sm ${x.activo ? "btn-outline-warning" : "btn-outline-success"}`,
+          text: x.activo ? "Bloquear" : "Desbloquear",
+          attrs: { type: "button", "aria-label": `${x.activo ? "Bloquear" : "Desbloquear"} ${x.nombre} en ${u.nombre}` },
+          on: { click: async (e) => {
+            const b = e.currentTarget;             // tras el await currentTarget ya es null
+            b.disabled = true;
+            try {
+              const nuevo = await admin.bloquearComando(u.id_vehiculo, x.id_comando, x.activo);
+              tr.replaceWith(filaComando(nuevo));
+              toast(`${nuevo.nombre} ${nuevo.activo ? "desbloqueado" : "bloqueado"} en ${u.nombre}.`, nuevo.activo ? "ok" : "info");
+            } catch (err) {
+              b.disabled = false;
+              toast(err.message, "error");
+            }
+          } },
+        });
+      const tr = el("tr", { class: x.activo ? "" : "inactiva", dataset: { comando: x.id_comando } }, [
+        el("td", { text: x.codigo }),
+        el("td", {}, [el("strong", { text: x.nombre }), x.descripcion ? el("div", { class: "small text-secondary-emphasis", text: x.descripcion }) : null]),
+        el("td", {}, [el("span", { class: `badge ${x.activo ? "text-bg-success" : "text-bg-danger"}`, text: x.activo ? "Activo" : "Bloqueado" })]),
+        el("td", { class: "text-end" }, [accion]),
+      ]);
+      return tr;
+    };
     const catalogo = c.status === "fulfilled"
-      ? tabla({ titulo: "Catálogo de la unidad", columnas: ["Código", "Comando", "Estado"] },
-        c.value.slice().sort((a, b) => a.codigo - b.codigo).map((x) => el("tr", { class: x.activo ? "" : "inactiva" }, [
-          el("td", { text: x.codigo }),
-          el("td", {}, [el("strong", { text: x.nombre }), x.descripcion ? el("div", { class: "small text-secondary-emphasis", text: x.descripcion }) : null]),
-          el("td", {}, [el("span", { class: `badge ${x.activo ? "text-bg-success" : "text-bg-secondary"}`, text: x.activo ? "Activo" : "Inactivo" })]),
-        ])), "La unidad no tiene comandos: revisa las capacidades de su modelo.")
+      ? tabla({ titulo: "Catálogo de la unidad", columnas: ["Código", "Comando", "Estado", ""] },
+        c.value.slice().sort((a, b) => a.codigo - b.codigo).map(filaComando),
+        "La unidad no tiene comandos: revisa las capacidades de su modelo.")
       : el("p", { class: "aviso aviso-error", text: c.reason.message });
     const historial = h.status === "fulfilled"
       ? tabla({ titulo: "Historial reciente", columnas: ["Fecha", "Comando", "Origen"] },
@@ -101,7 +129,7 @@ export function crearInventario({ alCambiar }) {
       tamano: "lg modal-fullscreen-sm-down",
       cuerpo: [
         el("p", { class: "small text-secondary-emphasis", text:
-          "El catálogo viene del modelo al registrar la unidad (pestaña Modelos › Capacidades). El historial son las órdenes reales guardadas en RDS (las más recientes)." }),
+          "El catálogo viene del modelo al registrar la unidad (pestaña Modelos › Capacidades). Como empresa puedes bloquear un movimiento en cualquier unidad, también en una vendida y sin la autorización del cliente: nadie podrá usarlo (cliente, invitado ni DEMO) hasta que lo desbloquees. DETENER nunca se bloquea. El historial son las órdenes reales guardadas en RDS (las más recientes)." }),
         el("h3", { class: "subtitulo", text: "Catálogo de la unidad" }),
         catalogo,
         el("h3", { class: "subtitulo mt-3", text: "Historial reciente" }),

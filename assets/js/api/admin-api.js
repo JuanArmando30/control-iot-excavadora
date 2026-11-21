@@ -69,6 +69,9 @@ export const admin = {
   crearCredencial: (v) => post(R.adminDispositivo(id(v))).then(V.fila),
   revocarCredencial: (v) => post(R.adminDispositivoRevocar(id(v))).then(V.fila),
 
+  /* ---- Bloqueo de movimientos: cualquier unidad, sin soporte del cliente ---- */
+  bloquearComando: (v, c, bloqueado) => post(R.adminBloqueoComando(id(v), id(c)), { bloqueado }).then(V.fila),
+
   /* ---- Bitácora ---- */
   auditoria: (f) => get(conFiltros(R.adminAuditoria(), f)).then(V.pagina),
 };

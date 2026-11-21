@@ -149,6 +149,30 @@ catálogo de la vendida pero no su historial ni la mueve; cliente no elimina com
 Publicación: commit y push de backend y frontend, y en el servidor
 `actualizar_servidor.ps1 -Transicion cerrar` (no hay migraciones nuevas).
 
+### 8.1 La empresa bloquea movimientos de cualquier unidad
+
+La empresa es la dueña inicial del producto: puede **bloquear** un movimiento en **cualquier** unidad
+(inventario, exhibición o **vendida**) **sin** la autorización de soporte del cliente. Es la única excepción a
+la regla de la vendida: ver su historial o moverla sigue pidiendo el soporte.
+
+- **Dónde:** Inventario › «Movimientos» › botón **Bloquear / Desbloquear** en cada comando. DETENER muestra
+  «Parada de seguridad» y no se puede bloquear (la API responde 409).
+- **API:** `POST /admin/unidades/{id}/comandos/{id_comando}/bloqueo` con `{"bloqueado": true|false}`, solo
+  administrador. Marca el comando inactivo en el catálogo de la unidad (`sp_actualizar_comando`, sin migración)
+  y deja `comando.bloquear` / `comando.desbloquear` en la auditoría.
+- **Efecto inmediato:**
+  - La API rechaza el movimiento (409 «El movimiento X está bloqueado en esta unidad») al cliente, al
+    invitado (su reserva en curso se actualiza) y a las DEMO que lo usen. Una DEMO en curso que lo use se
+    detiene y termina en DETENER.
+  - La página de Control lo deshabilita al instante y muestra el aviso «La empresa bloqueó el movimiento X»
+    (evento WSS `catalogo_actualizado`; Monitoreo también lo registra).
+- **El cliente no puede desbloquearlo:** tanto `…/bloqueo` como `…/comandos/{id}/actualizar` le responden 403.
+
+Pruebas: `pytest` **84** (bloqueo de la vendida sin soporte, cliente sin poder desbloquear, DETENER no
+bloqueable, 404 de comando ajeno, auditoría y reserva de invitado en curso). Navegador **18/18**: la empresa
+bloquea desde Inventario, el Control abierto del cliente se deshabilita en vivo, desbloquea y vuelve a moverse.
+Regresión 22/22 (invitado) y 25/25 (WSS).
+
 ## 9. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.

@@ -604,6 +604,12 @@ ws.addEventListener("mensaje", (e) => {
     alternarInterruptor(ev.codigo, { avisar: ev.evento === "movimiento_individual" });   // la DEMO no llena de avisos
   }
   if (ev.evento === "movimiento_individual") botonera.marcarActivo(ev.codigo);
+  if (ev.evento === "catalogo_actualizado") {                     // la empresa bloqueó/desbloqueó un movimiento
+    toast(ev.datos.mensaje || "El catálogo de la unidad cambió.", ev.datos.bloqueado ? "info" : "ok");
+    log("Unidad", ev.datos.mensaje || "catálogo actualizado");
+    cargarCatalogo();
+    return;
+  }
   // Etapa 8: solicitado (envío) → aceptado (API) → REPORTADO (lo dice el ESP32, no la API).
   if (ev.evento === "reporte_dispositivo") {
     if (!ev.datos.accion) return;                       // reporte desconocido: no se supone nada

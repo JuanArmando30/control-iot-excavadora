@@ -230,6 +230,7 @@ const EVENTOS_WS = new Set([
   "demo_iniciada", "demo_movimiento", "demo_finalizada", "demo_cancelada",
   "error", "pong",
   "reporte_dispositivo",          // Etapa 8: lo que la UNIDAD dice que hizo (no el acuse de la API)
+  "catalogo_actualizado",         // la empresa bloqueó/desbloqueó un movimiento de la unidad
 ]);
 const ACCIONES_REPORTE = new Set(["ejecutando", "detenido", "ignorado"]);
 
@@ -271,6 +272,7 @@ export function eventoWs(texto, idVehiculo) {
       // Etapa 8 · reporte_dispositivo: lo que la UNIDAD dice que hizo (solo valores conocidos)
       accion: ACCIONES_REPORTE.has(d.accion) ? d.accion : null,
       motivo: textoONulo(d.motivo, 60),
+      bloqueado: typeof d.bloqueado === "boolean" ? d.bloqueado : null,
     },
   };
 }
