@@ -173,6 +173,44 @@ bloqueable, 404 de comando ajeno, auditoría y reserva de invitado en curso). Na
 bloquea desde Inventario, el Control abierto del cliente se deshabilita en vivo, desbloquea y vuelve a moverse.
 Regresión 22/22 (invitado) y 25/25 (WSS).
 
+### 8.2 Eliminar una unidad dada de baja (V015)
+
+**Falla:** una unidad con historial no se podía eliminar (regla H13: se da de baja para conservarlo), pero
+la regla seguía aplicándose **después** de la baja. Además, sus asignaciones pasadas, autorizaciones de
+soporte, reservas y credencial (`ON DELETE RESTRICT`) bloqueaban el `DELETE`. Una unidad dada de baja se
+quedaba para siempre en la pestaña Vehículos.
+
+**Corrección:**
+- La baja es el **paso previo**: conserva el historial hasta que la empresa decide eliminar la unidad.
+- Una unidad **dada de baja** se elimina **definitivamente** con `sp_eliminar_unidad_baja` (migración V015).
+  En una sola transacción borra la unidad, sus comandos, historial, estado, DEMO y sus pasos, asignaciones
+  pasadas, autorizaciones de soporte, reservas de invitado y credencial del ESP32. Rechaza la operación
+  si la unidad no está en baja o tiene una asignación vigente.
+- La bitácora registra `unidad.eliminar` con el nombre de la unidad y cuánto se borró (la auditoría no
+  tiene FK a la unidad, así que se conserva).
+- **Dónde:**
+  - Pestaña **Vehículos › Eliminar** (`POST /vehiculos/{id}/eliminar`): si la unidad está en baja, la
+    elimina definitivamente.
+  - **Inventario**: botón **Eliminar** en las unidades dadas de baja (`POST /admin/unidades/{id}/eliminar`).
+    Pide escribir el nombre de la unidad para confirmar.
+- **Sin baja y con historial** sigue respondiendo 409: «primero dala de baja en Inventario».
+- **Sin V015** en la base responde 503 indicando aplicar la migración, y no borra nada.
+
+Pruebas: `pytest` **86**. `migrar probar` en MySQL 8.0 local con la estructura de RDS: V001–V015, la
+reversión deja la base idéntica y `probar_v015` comprueba que una unidad con historial, DEMO, venta, soporte,
+reserva y credencial no deja ninguna fila. Navegador **12/12** (pestaña Vehículos, Inventario con nombre
+equivocado y correcto, unidad sin baja protegida).
+
+**Publicación (sí hay migración):**
+1. Commit y push de backend y frontend.
+2. En el servidor: `actualizar_servidor.ps1 -Transicion cerrar`. Descarga el código, incluido el archivo
+   V015. Hasta aplicar la migración todo funciona igual; solo eliminar una unidad en baja responde 503.
+3. Crea un **snapshot de RDS** y anota su identificador.
+4. Desde `C:\vehiculo_oit`:
+   - `.\.venv\Scripts\python.exe -m app.db.migrar probar`
+   - Si pasa: `.\.venv\Scripts\python.exe -m app.db.migrar aplicar --respaldo <id-del-snapshot>`
+5. La API detecta la versión 15 sola (en menos de 30 s, sin reiniciar). Recarga el navegador con Ctrl + F5.
+
 ## 9. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.

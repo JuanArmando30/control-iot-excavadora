@@ -80,6 +80,7 @@ const RUTAS = Object.freeze({
   adminUnidades: () => "/admin/unidades",
   adminUnidadActualizar: (v) => `/admin/unidades/${v}/actualizar`,
   adminUnidadBaja: (v) => `/admin/unidades/${v}/baja`,
+  adminUnidadEliminar: (v) => `/admin/unidades/${v}/eliminar`,
   adminUsuarios: () => "/admin/usuarios",
   adminUsuarioActualizar: (u) => `/admin/usuarios/${u}/actualizar`,
   adminUsuarioCodigo: (u) => `/admin/usuarios/${u}/codigo-restablecimiento`,

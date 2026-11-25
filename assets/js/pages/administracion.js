@@ -131,7 +131,7 @@ async function cargarVehiculos() {
       `Editar vehículo ${v.nombre}`),
       boton("Eliminar", "i-trash", "btn-outline-danger", async () => {
         if (!requiereClave()) return;
-        if (!(await confirmar("Eliminar vehículo", `Se eliminará «${v.nombre}» con sus comandos y DEMO. Si tiene historial, la API lo rechaza para conservarlo: usa «Baja» en Inventario. Requiere administrador.`))) return;
+        if (!(await confirmar("Eliminar vehículo", `Se eliminará «${v.nombre}» con sus comandos y DEMO. Si ya está dada de baja, se borra para siempre junto con su historial (no se puede deshacer). Si no está dada de baja y tiene historial, la API lo rechaza: primero usa «Baja» en Inventario.`))) return;
         await escribir(() => api.eliminarVehiculo(v.id_vehiculo), "Vehículo eliminado.", recargarTodo);
       }, `Eliminar vehículo ${v.nombre}`),
     ]),

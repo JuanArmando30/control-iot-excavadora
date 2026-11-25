@@ -2,6 +2,7 @@
  * Inventario de unidades físicas (GET/POST /admin/unidades).
  * Vender = asignar a un cliente (la unidad pasa a «vendida» en la base);
  * liberar = finalizar la asignación. «Baja» sustituye a borrar: conserva el historial.
+ * Una unidad YA dada de baja se puede «Eliminar» para siempre (con su historial; V015).
  */
 import { CONFIG } from "../../config.js";
 import { admin } from "../../api/admin-api.js";
@@ -157,6 +158,9 @@ export function crearInventario({ alCambiar }) {
     }
     if (!["vendida", "baja"].includes(u.estado_comercial)) {
       acciones.push(boton("Baja", "i-trash", "btn-outline-danger", () => baja(u), `Dar de baja ${u.nombre}`));
+    }
+    if (u.estado_comercial === "baja") {
+      acciones.push(boton("Eliminar", "i-trash", "btn-outline-danger", () => eliminar(u), `Eliminar definitivamente ${u.nombre}`));
     }
     return el("tr", { class: u.activo ? "" : "inactiva" }, [
       el("td", { text: u.id_vehiculo }),
@@ -348,6 +352,33 @@ export function crearInventario({ alCambiar }) {
       await cargar();
       alCambiar();
     } catch (e) { toast(e.message, "error"); }
+  }
+
+  /** Borrado DEFINITIVO de una unidad dada de baja: pide escribir su nombre (no se puede deshacer). */
+  function eliminar(u) {
+    const entrada = el("input", { class: "form-control", attrs: {
+      id: "confirmaEliminar", required: true, autocomplete: "off", spellcheck: "false", "aria-describedby": "ayudaEliminar" } });
+    abrirModal({
+      titulo: `Eliminar definitivamente · ${u.nombre}`,
+      cuerpo: [
+        el("p", { text: "Se borrará para siempre de RDS: la unidad, su catálogo de comandos, todo su historial de movimientos, sus DEMO, sus asignaciones pasadas, autorizaciones de soporte, reservas de invitado y la credencial del ESP32." }),
+        el("p", { class: "aviso aviso-error", text: "No se puede deshacer. La bitácora conserva quién la eliminó y cuánto se borró." }),
+        el("label", { class: "form-label", text: "Para confirmar, escribe el nombre de la unidad:", attrs: { for: "confirmaEliminar" } }),
+        entrada,
+        el("div", { class: "form-text", text: u.nombre, attrs: { id: "ayudaEliminar" } }),
+      ],
+      acciones: [
+        { texto: "Cancelar", clase: "btn-outline-secondary" },
+        { texto: "Eliminar para siempre", clase: "btn-danger", tipo: "submit", alPulsar: async (ctx) => {
+          if (entrada.value.trim() !== u.nombre.trim()) { ctx.error("El nombre no coincide."); return false; }
+          await admin.eliminarUnidad(u.id_vehiculo);
+          toast(`«${u.nombre}» eliminada definitivamente.`, "ok");
+          await cargar();
+          alCambiar();
+          return true;
+        } },
+      ],
+    });
   }
 
   const reiniciar = () => { estado.desplazamiento = 0; cargar(); };

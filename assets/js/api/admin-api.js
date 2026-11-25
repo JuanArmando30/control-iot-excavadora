@@ -44,6 +44,8 @@ export const admin = {
   crearUnidad: (c) => post(R.adminUnidades(), c).then(V.fila),
   actualizarUnidad: (v, c) => post(R.adminUnidadActualizar(id(v)), c).then(V.fila),
   bajaUnidad: (v) => post(R.adminUnidadBaja(id(v))).then(V.fila),
+  /** Solo unidades dadas de baja (V015): borra para siempre la unidad y su historial. */
+  eliminarUnidad: (v) => post(R.adminUnidadEliminar(id(v))).then(V.fila),
 
   /* ---- Usuarios ---- */
   usuarios: (f) => get(conFiltros(R.adminUsuarios(), f)).then(V.pagina),
