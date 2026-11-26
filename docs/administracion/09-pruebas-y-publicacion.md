@@ -248,6 +248,32 @@ Pruebas: `pytest` 87. `migrar probar` en MySQL 8.0 local de V001 a V017 pasa, co
 3. Snapshot de RDS, luego `migrar probar` y `migrar aplicar --respaldo <id>`. Son los mismos pasos que
    V015, ver 8.2.
 
+### 8.5 Bitácora: todo lo que hace el invitado
+
+**Antes:** la Bitácora solo mostraba que un invitado entró (`invitado.reservar`) y que terminó (`invitado.fin`).
+
+**Ahora** cada acción del invitado queda registrada con su número de reserva:
+
+| Acción | Detalle en la Bitácora |
+|---|---|
+| `invitado.movimiento` | Cada orden aceptada, con el comando y el modo. Ej.: «AVANZAR (#1) · Joystick», «LUZ (#10) · Botón», «DETENER (#9) · Voz» |
+| `invitado.demo` | «Inició la DEMO «Paseo corto» · 2 pasos» |
+| `invitado.demo_cancelar` | «Canceló la DEMO · N pasos emitidos» |
+| `invitado.fin` | Resumen: «Fin de la reserva #12 (se acabó el tiempo) · 18 órdenes · 1 DEMO · 120 s» |
+
+- **Lo que no se registra como hecho:** las órdenes rechazadas (por ejemplo, un movimiento no permitido).
+- **Columna «Quién»:** muestra «Invitado · reserva #N»; el cierre aparece como «Sistema · reserva #N».
+- **Filtro nuevo «Invitados (todo lo que hicieron)»:** también se agregaron «Exhibición» y «Bloqueos de
+  movimientos».
+- **Volumen:** el mando sostenido reenvía cada 2,4 s, así que una reserva de 2 minutos deja como mucho unas
+  decenas de filas.
+- **Escritura:** se hace en `InvitadoService.auditar_accion` (mejor esfuerzo, igual que el resto de la
+  auditoría).
+
+Sin migración. Pruebas: `pytest` 88 (orden exacto de las acciones, comandos y modos, número de reserva y
+resumen). Navegador 9/9: el invitado usa Pulso, Teclado, Luz y una DEMO, y el administrador lo ve en la
+Bitácora con el filtro «Invitados».
+
 ## 9. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.
