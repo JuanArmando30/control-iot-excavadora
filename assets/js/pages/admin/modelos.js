@@ -107,13 +107,13 @@ export function crearModelos({ alCambiar }) {
       { nombre: "descripcion", etiqueta: "Descripción", maxLength: 255, valor: c?.descripcion },
       { nombre: "tipo", etiqueta: "Tipo", tipo: "select", requerido: true, valor: c?.tipo ?? "movimiento",
         opciones: Object.entries(TIPOS) },
-      { nombre: "permitido_invitado", etiqueta: "Permitido a invitados (unidad de exhibición)", tipo: "checkbox", valor: c?.permitido_invitado },
+      { nombre: "permitido_invitado", etiqueta: "Permitido a invitados (movimientos; el paro y los accesorios siempre lo están)", tipo: "checkbox", valor: c?.permitido_invitado },
     ];
     formulario(c ? `Editar ${c.nombre} (código ${c.codigo})` : `Nueva capacidad para «${m.nombre}»`, campos, async (d) => {
       await admin.guardarCapacidad(m.id_modelo, { ...d, codigo: c ? c.codigo : d.codigo, nombre: (d.nombre || "").toUpperCase() });
       toast("Capacidad guardada.", "ok");
       await cargar();
-    }, { nota: "El paro (DETENER) siempre queda permitido a invitados y no se puede eliminar." });
+    }, { nota: "El paro (DETENER) y los accesorios (luz, sonido, encender/apagar) siempre quedan permitidos a invitados. DETENER no se puede eliminar." });
   }
 
   $("btnNuevoModelo").addEventListener("click", () => formulario("Nuevo modelo", camposModelo(), async (d) => {

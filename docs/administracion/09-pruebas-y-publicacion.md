@@ -211,6 +211,24 @@ equivocado y correcto, unidad sin baja protegida).
    - Si pasa: `.\.venv\Scripts\python.exe -m app.db.migrar aplicar --respaldo <id-del-snapshot>`
 5. La API detecta la versión 15 sola (en menos de 30 s, sin reiniciar). Recarga el navegador con Ctrl + F5.
 
+### 8.3 Accesorios para el invitado (luz, sonido, encender/apagar)
+
+**Antes:** el invitado solo recibía los comandos marcados «Permitido a invitados» en el modelo, más DETENER.
+Los accesorios (códigos 10, 11 y 12) no tenían esa marca, así que no aparecían ni en el control completo
+ni en la vista sencilla.
+
+**Ahora:** los accesorios activos de la unidad siempre entran en la reserva del invitado, igual que DETENER,
+porque no mueven la unidad. Así se ven los mismos botones que en las cuentas de administrador y cliente,
+con su estado (Luz ON, Sonido ON, Encendida).
+- Los **movimientos** siguen dependiendo de la marca del modelo.
+- Un accesorio **bloqueado** por la empresa (8.1) no aparece.
+- Las DEMO de fábrica que usan accesorios ahora también se ofrecen al invitado.
+- Al guardar una capacidad de tipo accesorio, la marca queda en «Sí».
+
+Sin migración: se resuelve en `InvitadoService._comandos_de_invitado`. Pruebas: `pytest` 86 (con un
+movimiento no permitido → 403 y LUZ → 201). Navegador **12/12**: el invitado ve los tres botones, los usa,
+el botón alterna su estado y el historial los guarda.
+
 ## 9. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.

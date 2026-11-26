@@ -10,8 +10,8 @@ Pendiente en el servidor: `probar` V012, snapshot, `aplicar`.
    o si la API se reinicia (estado seguro).
 2. Cualquier visitante entra a **`invitado.html`** (enlace en la tarjeta de inicio de sesión), ve el
    **catálogo público** y, si la unidad está disponible, la **reserva de 1 minuto** tras aceptar las condiciones; al reservar se abre el **control completo** (`index.html?invitado`) con los 6 modos.
-3. Durante la reserva: reloj, **DETENER** grande, solo los **movimientos permitidos a invitados**
-   del modelo y las **DEMO de fábrica** cuyos pasos son todos permitidos.
+3. Durante la reserva: reloj, **DETENER** grande, los **movimientos permitidos a invitados**
+   del modelo, los **accesorios** (luz, sonido, encender/apagar) como en las cuentas de administrador y cliente, y las **DEMO de fábrica** cuyos pasos son todos permitidos.
 4. Al **terminar**, **caducar** o **dejar de dar señales 15 s** (pestaña cerrada, sin red), el servidor
    cancela la DEMO, **envía DETENER** y libera la unidad.
 
@@ -22,7 +22,7 @@ Pendiente en el servidor: `probar` V012, snapshot, `aplicar`.
 | Solo la unidad de **exhibición**; nunca la de un comprador | El SP solo reserva unidades activas en estado `exhibicion`; el token del invitado solo sirve para su unidad (403 en otra) |
 | Reserva **exclusiva**, sin fila | Índice único de V005 (`uq_reserva_vigente`); si dos reservan a la vez, la base deja pasar a uno |
 | Nadie más mueve la unidad durante la reserva | Clave, control abierto, admin o dueño → 409. **DETENER y cancelar siempre pasan** |
-| Comandos limitados | `permitido_invitado` del modelo (DETENER siempre). Hoy: movimientos sí; luz, sonido y encendido no |
+| Comandos limitados | `permitido_invitado` del modelo para los movimientos. DETENER y los accesorios (luz, sonido, encender/apagar) siempre: no mueven la unidad |
 | Tiempo limitado | 1 min; vigilante cada segundo; reserva vencida también se cierra en la base |
 | Desconexión | Latido cada 5 s; sin señal 15 s → DETENER y fin (`desconexion`) |
 | Abuso | 5 reservas por hora y 3 min entre reservas por red (hash de la IP), contados en RDS; la espera no aplica tras una desconexión (V014); además límite en memoria |
@@ -66,7 +66,7 @@ Servicio: `app/services/invitado_service.py` (reserva, vigilante, exclusividad, 
 ## 5. Pruebas
 
 - **Backend (61):** 8 nuevas en `tests/test_invitados.py`: catálogo y exhibición cerrada por defecto;
-  reserva exclusiva y comandos (LUZ → 403, DETENER sí, clave/admin → 409, otra unidad → 403, token
+  reserva exclusiva y comandos (movimiento no permitido → 403, LUZ y DETENER sí, clave/admin → 409, otra unidad → 403, token
   inventado → 401); no se abre ni reserva una unidad vendida; terminar deja la unidad en DETENER y
   aplica enfriamiento (429); vigilante por caducidad y por desconexión; DEMO aptas para invitados;
   la empresa cierra o termina; sin V012 → 503. Mutaciones: quitar la exclusividad o el vigilante hace fallar las pruebas.
