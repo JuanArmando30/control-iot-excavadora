@@ -229,6 +229,25 @@ Sin migración: se resuelve en `InvitadoService._comandos_de_invitado`. Pruebas:
 movimiento no permitido → 403 y LUZ → 201). Navegador **12/12**: el invitado ve los tres botones, los usa,
 el botón alterna su estado y el historial los guarda.
 
+### 8.4 Invitado: reserva de 2 minutos y espera de 15 s (V017)
+
+- `MINUTOS_RESERVA = 2` (sin migración) y `ENFRIAMIENTO_S = 15`. Siguen 5 reservas por hora, y no hay
+  espera tras una desconexión (V014).
+- **V017** cambia solo `sp_invitado_reservar`: la espera pasa de **minutos** enteros a **segundos**, porque
+  15 s no se pueden expresar en minutos. La API envía 15 (segundos) solo cuando la base está en V017; antes
+  envía 1 (minuto), para que «15» nunca signifique 15 minutos.
+- La V016 de este proyecto es `V016__accesorios_invitado`, que marca los accesorios como permitidos.
+
+Pruebas: `pytest` 87. `migrar probar` en MySQL 8.0 local de V001 a V017 pasa, con reversión idéntica.
+`probar_v017` comprueba una reserva de 2 min y una espera de 15 s. Navegador 6/6: reloj 1:5x, «de nuevo en
+0:12» y nueva reserva pasados 15 s.
+
+**Publicación:**
+1. Commit y push.
+2. `actualizar_servidor.ps1 -Transicion cerrar`.
+3. Snapshot de RDS, luego `migrar probar` y `migrar aplicar --respaldo <id>`. Son los mismos pasos que
+   V015, ver 8.2.
+
 ## 9. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.

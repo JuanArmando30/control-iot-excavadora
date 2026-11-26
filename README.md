@@ -8,7 +8,7 @@ empresa que vende vehículos IoT: **CONTROL | MONITOREO | ADMINISTRACIÓN** y un
 | **Control** | `index.html` | Mando horizontal en una pantalla: **conducción**, **brazo y pala**, luz, sonido, encendido, **Demo** y DETENER; 6 modos (Pulso, Joystick, Voz, Giroscopio, IA, Táctil); estado **solicitado → aceptado → reportado por la unidad**; selector de unidad | Comprador (sus unidades) · empresa (inventario; vendida solo con soporte) |
 | **Monitoreo** | `monitoreo.html` | Último movimiento en vivo (WSS) y tabla de los **10 últimos movimientos** persistidos en RDS | Igual que Control |
 | **Administración** | `administracion.html` | Empresa: Panel, Inventario, Modelos, Clientes, Asignaciones, Bitácora, catálogo técnico. Comprador: **Mis vehículos** (DEMO propias con editor, soporte) | Con sesión (correo y contraseña) |
-| **Invitado** | `invitado.html` | Catálogo público y **prueba de 1 min** de la unidad de exhibición (con los 6 modos de Control) cuando la empresa la abre | Cualquiera, sin cuenta |
+| **Invitado** | `invitado.html` | Catálogo público y **prueba de 2 min** de la unidad de exhibición (con los 6 modos de Control) cuando la empresa la abre | Cualquiera, sin cuenta |
 
 Seguridad (Etapas 4–9): sesión con token de acceso corto en memoria + token de renovación que rota;
 autorización por unidad en REST y WebSocket (ticket de un solo uso); credencial propia del ESP32;

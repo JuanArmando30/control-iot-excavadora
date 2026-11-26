@@ -79,7 +79,7 @@ function confirmarReserva(u) {
         el("li", { text: "DETENER la para al instante. Úsalo ante cualquier duda." }),
         el("li", { text: "Si cierras la pestaña o pierdes conexión, se detiene sola." }),
         el("li", { text: "Se abre el control completo: Pulso, Joystick, Voz, Giroscopio, IA y Táctil." }),
-        el("li", { text: "Si la terminas tú, podrás volver a probarla pasados unos minutos." }),
+        el("li", { text: "Si la terminas tú, podrás volver a probarla en 15 segundos." }),
       ]),
       campo({ nombre: "acepto", etiqueta: "Entiendo y quiero probarla", tipo: "checkbox" }),
     ],
@@ -119,7 +119,7 @@ function entrarPrueba(r, u, { retomada = false } = {}) {
     obtenerTicket: () => invitado.ticketWs(u.id_vehiculo) });
   if (retomada) latir();
   $("btnDetener").focus();
-  toast(retomada ? "Retomaste tu reserva." : "¡Listo! La unidad es tuya por un minuto.", "ok");
+  toast(retomada ? "Retomaste tu reserva." : "¡Listo! La unidad es tuya por dos minutos.", "ok");
 }
 
 function pintarMandos() {
