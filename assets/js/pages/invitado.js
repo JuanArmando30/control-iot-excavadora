@@ -15,6 +15,7 @@ import { invitado } from "../api/invitado-api.js";
 import { abrirModal, campo } from "../ui/modales.js";
 import { $, el, icono, toast, vibrar } from "../ui/dom.js";
 import { iniciarConectividad } from "./comun.js";
+import { navInvitado } from "../core/modo-invitado.js";
 
 const T = CONFIG.tiempos;
 const mmss = (s) => `${Math.floor(Math.max(s, 0) / 60)}:${String(Math.max(s, 0) % 60).padStart(2, "0")}`;
@@ -100,6 +101,7 @@ function confirmarReserva(u) {
 function entrarPrueba(r, u, { retomada = false } = {}) {
   reserva = r;
   unidad = u;
+  navInvitado(true);                     // durante la prueba: sin Monitoreo ni Administración en el menú
   total = Math.max(r.segundos_restantes, 1);
   finLocal = Date.now() + r.segundos_restantes * 1000;
   avisado30 = false;
@@ -214,6 +216,7 @@ function salir(mensaje) {
   clearInterval(tLatido);
   clearInterval(tReloj);
   reserva = null;
+  navInvitado(false);
   enDemo = false;
   invitado.olvidar();
   ws.cambiar(null, SIN_RESERVA);

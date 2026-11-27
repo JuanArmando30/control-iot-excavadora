@@ -11,6 +11,7 @@
  *     consultas simultáneas) que reconcilia la tabla sin recargar la página.
  *  + Registro técnico de eventos WSS, plegado.
  */
+import "../core/guardia-invitado.js";           // invitado con reserva en esta pestaña → vuelve a su control
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
 import { WS } from "../core/ws-client.js";

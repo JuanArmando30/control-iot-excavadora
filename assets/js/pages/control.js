@@ -34,15 +34,21 @@ import { mio } from "../api/auth-api.js";
 import { invitado } from "../api/invitado-api.js";
 import { elegirUnidad, identidadWs, resolverUnidad } from "../core/unidad-activa.js";
 import { iniciarConectividad, montarSelectorUnidad, soltarAlCerrarSesion, pintarVehiculo } from "./comun.js";
+import { hayReservaInvitado, navInvitado } from "../core/modo-invitado.js";
 
 /* Etapa 8: la unidad sale de la sesión (dueño: las suyas; empresa: su inventario;
    sin sesión: la de exhibición). Con sesión, el servidor autoriza por unidad. */
 const MODO_INVITADO = new URLSearchParams(location.search).has("invitado");
+if (!MODO_INVITADO && hayReservaInvitado()) {     // con reserva en esta pestaña, Control es el del invitado
+  location.replace("index.html?invitado");
+  await new Promise(() => {});
+}
 const RESERVA = MODO_INVITADO ? await invitado.recuperar() : null;
 if (MODO_INVITADO && !RESERVA) {                // sin reserva vigente en esta pestaña: al catálogo
   location.replace("invitado.html");
   await new Promise(() => {});
 }
+if (RESERVA) navInvitado(true);                 // sin Monitoreo ni Administración en el menú
 const UNIDAD = RESERVA
   ? { usuario: null, opciones: [{ id: RESERVA.id_vehiculo, nombre: "" }], id: RESERVA.id_vehiculo, aviso: "" }
   : await resolverUnidad();

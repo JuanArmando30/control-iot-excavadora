@@ -274,6 +274,24 @@ Sin migración. Pruebas: `pytest` 88 (orden exacto de las acciones, comandos y m
 resumen). Navegador 9/9: el invitado usa Pulso, Teclado, Luz y una DEMO, y el administrador lo ve en la
 Bitácora con el filtro «Invitados».
 
+### 8.6 Menú del invitado: sin Monitoreo ni Administración
+
+**Antes:** durante la prueba, el menú seguía ofreciendo Monitoreo y Administración. Administración lo
+regresaba al inicio de sesión.
+
+**Ahora,** mientras la pestaña tiene una reserva de invitado:
+- **Menú:** solo queda **Control**, que junto con el logotipo lleva a `index.html?invitado`. Monitoreo y
+  Administración se ocultan y no se alcanzan con Tab. Pasa en el control completo y en la vista sencilla.
+- **Bloqueo por URL:** si escribe `monitoreo.html`, `administracion.html` o `index.html`, vuelve a su
+  control. El módulo `core/guardia-invitado.js` se importa primero en Monitoreo y Administración y detiene
+  la carga de la página.
+- **Al terminar o caducar la prueba,** el token se borra de la pestaña y el menú vuelve a ser el normal.
+- **Catálogo público sin reserva:** conserva los tres enlaces, porque desde Administración inician sesión
+  los clientes.
+
+Solo frontend (`core/modo-invitado.js`). Navegador 11/11. Regresión: accesorios 12/12, tiempos 6/6 y
+bitácora 9/9. En el teléfono, el encabezado queda sin desborde.
+
 ## 9. Criterios de aceptación
 
 - [x] Pruebas negativas automáticas en modo producción para todos los casos pedidos.

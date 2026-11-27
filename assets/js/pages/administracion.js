@@ -11,6 +11,7 @@
  *
  * Las pestañas se cargan al abrirlas (siempre con datos frescos de RDS).
  */
+import "../core/guardia-invitado.js";           // invitado con reserva en esta pestaña → vuelve a su control
 import { CONFIG } from "../config.js";
 import { api } from "../api/vehiculo-api.js";
 import { auth } from "../api/auth-api.js";

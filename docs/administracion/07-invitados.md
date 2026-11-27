@@ -29,6 +29,7 @@ Pendiente en el servidor: `probar` V012, snapshot, `aplicar`.
 | Interruptor | La empresa decide cuándo hay supervisión; caduca solo; al cerrarlo termina la reserva |
 | Reinicio de la API | Al arrancar se cierran todas las reservas abiertas (`detenida`) y la exhibición queda cerrada |
 | Token | Aleatorio, en memoria y en el `sessionStorage` de la pestaña (para retomar la reserva al recargar; nunca `localStorage`); en la base solo su HMAC; cabecera `X-Invitado` |
+| Navegación | Durante la prueba el menú solo muestra **Control**; Monitoreo y Administración se ocultan y, si se abren por URL, regresan a su control (`core/modo-invitado.js`, `core/guardia-invitado.js`) |
 | Trazabilidad | El historial guarda la sesión del invitado como autor. En la **Bitácora** (filtro «Invitados») queda todo lo que hizo, con su número de reserva: `invitado.reservar`, cada orden `invitado.movimiento` (comando y modo: Pulso, Joystick, Voz…), `invitado.demo` / `invitado.demo_cancelar` e `invitado.fin` con el resumen (motivo, órdenes, DEMO, duración). También `exhibicion.abrir/cerrar` e `invitado.terminar` (empresa) |
 
 ## 3. Backend
